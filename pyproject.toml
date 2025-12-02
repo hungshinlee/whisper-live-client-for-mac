@@ -1,0 +1,9 @@
+[project]
+name = "whisper-live-client"
+version = "0.1.0"
+description = "WhisperLive client for real-time speech transcription"
+requires-python = ">=3.11"
+dependencies = [
+    "whisper-live",
+    "pyaudio",
+]

@@ -1,0 +1,33 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Output files
+output.srt
+*.wav
+*.mp3
+
+# uv lock (optional, can be committed)
+# uv.lock
+
+# Whisper model cache
+.cache/
