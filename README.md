@@ -38,23 +38,21 @@ uv venv
 uv pip install mlx-whisper pyaudio numpy
 ```
 
-### 轉換自訂模型
+### 即時語音辨識
 
-可以將 HuggingFace 上的 Whisper 模型轉換為 MLX 格式：
+可以直接使用 HuggingFace 上的 MLX 模型（會自動下載），或使用自行轉換的模型。
+
+#### 使用 HuggingFace 模型（自動下載）
 
 ```bash
-cd convert
+# 純轉錄（使用預設的 whisper-large-v3）
+uv run python transcribe_only.py
 
-# 轉換模型（例如臺灣客語模型）
-./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
-
-# 轉換其他模型
-./convert.sh openai/whisper-large-v3
+# 翻譯成英文
+uv run python transcribe.py
 ```
 
-轉換後的模型存放在 `models/` 目錄。
-
-### 即時語音辨識
+#### 使用本地轉換的模型
 
 ```bash
 # 基本使用（自動偵測語言）
@@ -72,6 +70,33 @@ uv run python realtime.py --task translate
 # 指定語言
 uv run python realtime.py --language zh
 ```
+
+### 模型選擇建議
+
+⚠️ **效能提示：** 如果你的 Mac 晶片不是 M4，建議使用 `medium` 或更小的模型，以獲得更流暢的體驗。
+
+| 晶片 | 建議模型 |
+|------|----------|
+| M4 / M4 Pro / M4 Max | `large-v3`（最佳品質）|
+| M3 / M3 Pro / M3 Max | `large-v3` 或 `medium` |
+| M2 / M2 Pro / M2 Max | `medium` 或 `small` |
+| M1 / M1 Pro / M1 Max | `small` 或 `base` |
+
+### 轉換自訂模型（可選）
+
+如果需要使用特定語言的微調模型（如臺灣客語），可以將 HuggingFace 上的 Whisper 模型轉換為 MLX 格式：
+
+```bash
+cd convert
+
+# 轉換模型（例如臺灣客語模型）
+./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
+
+# 轉換其他模型
+./convert.sh openai/whisper-large-v3
+```
+
+轉換後的模型存放在 `models/` 目錄。
 
 ### 參數說明
 
@@ -175,6 +200,19 @@ uv run python transcribe_only.py
 
 ## 支援的模型
 
+### MLX 社群模型（自動下載）
+
+⚠️ **重要：turbo 版本不支援翻譯功能！**
+
+| 模型 | 大小 | 翻譯支援 | 建議晶片 |
+|------|------|----------|----------|
+| `mlx-community/whisper-large-v3-mlx` | ~3 GB | ✅ 支援 | M3/M4 |
+| `mlx-community/whisper-large-v3-turbo` | ~1.6 GB | ❌ 不支援 | M2/M3/M4 |
+| `mlx-community/whisper-medium-mlx` | ~1.5 GB | ✅ 支援 | M1/M2/M3/M4 |
+| `mlx-community/whisper-small-mlx` | ~488 MB | ✅ 支援 | 全部 |
+| `mlx-community/whisper-base-mlx` | ~145 MB | ✅ 支援 | 全部 |
+| `mlx-community/whisper-tiny-mlx` | ~75 MB | ✅ 支援 | 全部 |
+
 ### 本地轉換模型
 
 可以轉換 HuggingFace 上的任何 Whisper 模型：
@@ -184,16 +222,6 @@ uv run python transcribe_only.py
 | `formospeech/whisper-large-v2-taiwanese-hakka-v1` | 臺灣客語 |
 | `openai/whisper-large-v3` | OpenAI 官方最新模型 |
 | 其他 Whisper 微調模型 | 都可以轉換使用 |
-
-### MLX 社群模型（自動下載）
-
-⚠️ **重要：turbo 版本不支援翻譯功能！**
-
-| 模型 | 大小 | 翻譯支援 |
-|------|------|----------|
-| `mlx-community/whisper-large-v3-mlx` | ~3 GB | ✅ 支援 |
-| `mlx-community/whisper-large-v3-turbo` | ~1.6 GB | ❌ 不支援 |
-| `mlx-community/whisper-small` | ~488 MB | ✅ 支援 |
 
 ### WhisperLive 版本模型
 
@@ -261,9 +289,9 @@ whisper-live-client/
 │
 └── mlx/                   # MLX 版本（Apple GPU）
     ├── README.md
-    ├── realtime.py        # 🎤 即時語音辨識
-    ├── transcribe.py      # 翻譯（HF 模型）
-    ├── transcribe_only.py # 轉錄（HF 模型）
+    ├── realtime.py        # 🎤 即時語音辨識（本地模型）
+    ├── transcribe.py      # 翻譯（HF 模型自動下載）
+    ├── transcribe_only.py # 轉錄（HF 模型自動下載）
     │
     ├── convert/           # 模型轉換工具
     │   ├── convert.sh     # 轉換腳本
