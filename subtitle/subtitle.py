@@ -22,6 +22,8 @@ import argparse
 import signal
 import sys
 import threading
+import queue
+import time
 from collections import deque
 import numpy as np
 import pyaudio
@@ -270,8 +272,69 @@ def transcribe_audio(audio_data: bytes) -> str:
     return text
 
 
-def audio_thread(subtitle_window):
-    """錄音和辨識的執行緒"""
+# 建立線程安全的佇列，用於存放待辨識的音訊資料
+transcription_queue = queue.Queue()
+
+def transcription_thread(subtitle_window):
+    """
+    消費者執行緒：從佇列取出音訊並進行辨識
+    這樣做可以確保錄音不會因為辨識速度慢而中斷（避免漏字）
+    """
+    global running, model, task, language, convert_tw
+    
+    print("🚀 辨識執行緒已啟動")
+    
+    # 預熱模型 (確保模型載入記憶體)
+    print("⏳ 正在預熱模型...")
+    try:
+        dummy = np.zeros(RATE, dtype=np.float32)
+        warmup_kwargs = {"path_or_hf_repo": model, "task": task}
+        if language:
+            warmup_kwargs["language"] = language
+        mlx_whisper.transcribe(dummy, **warmup_kwargs)
+        print("✅ 模型預熱完成")
+    except Exception as e:
+        print(f"⚠️ 模型預熱失敗: {e}")
+    
+    while running:
+        try:
+            # 從佇列取得音訊，timeout 設為 0.5 秒以便能定期檢查 running 狀態
+            audio_data = transcription_queue.get(timeout=0.5)
+        except queue.Empty:
+            continue
+            
+        # 僅在終端機顯示排隊狀況，不影響字幕視窗滾動
+        q_size = transcription_queue.qsize()
+        if q_size > 0:
+            print(f"⏳ 佇列堆積: {q_size} 句")
+        
+        try:
+            text = transcribe_audio(audio_data)
+            if text and running:
+                subtitle_window.add_text(text)
+            elif not text and running:
+                # 如果辨識出空字串（例如只有雜訊），恢復顯示歷史訊息
+                # 這裡簡單重繪最後的狀態，或者依靠 add_text 來處理
+                # 目前 add_text 會重繪整個歷史，所以我們手動觸發一次重繪歷史
+                combined_text = "\n".join(subtitle_window.text_history)
+                # 如果沒有歷史資料，就顯示等待中
+                if not combined_text:
+                    combined_text = "🎤 等待說話..."
+                subtitle_window._update_label(combined_text)
+                
+        except Exception as e:
+            print(f"辨識錯誤: {e}")
+            subtitle_window.update_text(f"錯誤: {str(e)}")
+        
+        finally:
+            transcription_queue.task_done()
+
+
+def capture_thread(subtitle_window):
+    """
+    生產者執行緒：專注於錄音和 VAD 偵測
+    將偵測到的語音片段放入佇列，絕不阻塞
+    """
     global running, model, task, language, vad_config
     
     audio = pyaudio.PyAudio()
@@ -283,19 +346,10 @@ def audio_thread(subtitle_window):
         frames_per_buffer=CHUNK
     )
     
-    subtitle_window.update_text("⏳ 載入模型中...")
-    
-    # 預熱模型
-    dummy = np.zeros(RATE, dtype=np.float32)
-    warmup_kwargs = {"path_or_hf_repo": model, "task": task}
-    if language:
-        warmup_kwargs["language"] = language
-    mlx_whisper.transcribe(dummy, **warmup_kwargs)
-    
     # 建立 VAD
     vad = SileroVAD(vad_config)
     
-    subtitle_window.update_text("🎤 準備就緒，開始說話...")
+    subtitle_window.update_text("🎤 準備就緒，可隨時說話 (支援自動排隊)")
     
     try:
         while running:
@@ -311,12 +365,11 @@ def audio_thread(subtitle_window):
             audio_data = vad.process(data)
             
             if audio_data is not None and len(audio_data) > CHUNK * 10:
-                task_text = "翻譯" if task == "translate" else "辨識"
-                subtitle_window.update_text(f"⏳ {task_text}中...")
-                text = transcribe_audio(audio_data)
-                if text and running:
-                    # 使用 add_text 新增一行
-                    subtitle_window.add_text(text)
+                # 將語音資料放入佇列，讓辨識執行緒處理
+                transcription_queue.put(audio_data)
+                # 不要在這裡更新 UI 說「辨識中」，交給消費者執行緒處理，
+                # 這樣才能精確反映「正在處理」的狀態。
+                # 但如果 Queue 塞車嚴重，我們可以在這裡顯示一點提示（選擇性）
     
     except Exception as e:
         if running:
@@ -490,9 +543,13 @@ def main():
     # 建立字幕視窗
     subtitle_window = SubtitleWindow()
     
-    # 在背景執行緒中執行錄音和翻譯
-    thread = threading.Thread(target=audio_thread, args=(subtitle_window,), daemon=True)
-    thread.start()
+    # 啟動錄音執行緒 (Capture)
+    capture_t = threading.Thread(target=capture_thread, args=(subtitle_window,), daemon=True)
+    capture_t.start()
+    
+    # 啟動辨識執行緒 (Transcription)
+    transcribe_t = threading.Thread(target=transcription_thread, args=(subtitle_window,), daemon=True)
+    transcribe_t.start()
     
     # 設定定時器來檢查是否需要關閉
     def check_running():

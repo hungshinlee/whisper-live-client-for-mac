@@ -22,6 +22,9 @@ MLX Whisper 即時語音辨識（使用 Apple Silicon GPU）
 """
 import argparse
 import sys
+import threading
+import queue
+import time
 import numpy as np
 import pyaudio
 import mlx_whisper
@@ -279,50 +282,123 @@ def main():
     )
     vad = SileroVAD(vad_config)
     
-    # 初始化 PyAudio
-    audio = pyaudio.PyAudio()
-    stream = audio.open(
-        format=FORMAT,
-        channels=CHANNELS,
-        rate=RATE,
-        input=True,
-        frames_per_buffer=CHUNK
-    )
+    # 初始化 PyAudio (由 Capture Thread 使用)
+    # 這裡我們不開啟 stream，交由 Capture Thread 處理
     
-    print("正在載入模型...")
+    # 建立佇列
+    transcription_queue = queue.Queue()
     
-    # 預熱模型
-    dummy = np.zeros(RATE, dtype=np.float32)
-    warmup_kwargs = {"path_or_hf_repo": model, "task": args.task}
-    if args.language:
-        warmup_kwargs["language"] = args.language
-    mlx_whisper.transcribe(dummy, **warmup_kwargs)
-    print("模型載入完成！開始監聽...\n")
+    # 建立停止訊號
+    stop_event = threading.Event()
     
-    try:
-        while True:
-            print("🎤 等待說話...", end="\r")
+    def transcription_worker():
+        """辨識執行緒"""
+        print("⏳ 正在預熱模型...")
+        try:
+            # 預熱
+            dummy = np.zeros(RATE, dtype=np.float32)
+            warmup_kwargs = {"path_or_hf_repo": model, "task": args.task}
+            if args.language:
+                warmup_kwargs["language"] = args.language
+            mlx_whisper.transcribe(dummy, **warmup_kwargs)
+            print("✅ 模型預熱完成！開始監聽...\n")
+        except Exception as e:
+            print(f"⚠️ 模型預熱失敗: {e}\n")
             
-            # 讀取音訊
-            data = stream.read(CHUNK, exception_on_overflow=False)
-            
-            # 使用 VAD 處理
-            audio_data = vad.process(data)
-            
-            if audio_data is not None and len(audio_data) > CHUNK * 10:
+        while not stop_event.is_set():
+            try:
+                audio_data = transcription_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+                
+            # 顯示排隊狀況
+            q_size = transcription_queue.qsize()
+            if q_size > 0:
+                print(f"⏳ (堆積 {q_size} 句) 辨識中...", end="\r")
+            else:
                 print("⏳ 辨識中...   ", end="\r")
+                
+            try:
                 text = transcribe_audio(audio_data, model, args.language, args.task, convert_tw)
                 if text:
+                    # 清除「辨識中」並顯示結果
+                    # 使用 ANSI escape code 清除整行
+                    sys.stdout.write("\033[2K\r") 
                     print(f"📝 {text}")
+                else:
+                    # 如果沒字，也要清除狀態
+                    sys.stdout.write("\033[2K\r")
+                    print("🎤 等待說話...", end="\r")
+                    
+            except Exception as e:
+                print(f"\n❌ 錯誤: {e}")
+            finally:
+                transcription_queue.task_done()
+                
+        print("辨識執行緒已停止")
+
+    def capture_worker():
+        """錄音執行緒"""
+        audio = pyaudio.PyAudio()
+        stream = audio.open(
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RATE,
+            input=True,
+            frames_per_buffer=CHUNK
+        )
+        
+        try:
+            while not stop_event.is_set():
+                # 這裡單純顯示狀態有點困難，因為這會在背景跑
+                # 我們交由 Main Thread 或 Transcription Thread 更新狀態
+                # 或者只在沒有堆積時更新
+                
+                try:
+                    data = stream.read(CHUNK, exception_on_overflow=False)
+                except:
+                    break
+                
+                audio_data = vad.process(data)
+                
+                if audio_data is not None and len(audio_data) > CHUNK * 10:
+                    transcription_queue.put(audio_data)
+                    
+        except Exception as e:
+            print(f"\n❌ 錄音錯誤: {e}")
+        finally:
+            stream.stop_stream()
+            stream.close()
+            audio.terminate()
+            print("錄音執行緒已停止")
+
+    # 啟動執行緒
+    t_transcribe = threading.Thread(target=transcription_worker)
+    t_capture = threading.Thread(target=capture_worker)
+    
+    t_transcribe.start()
+    t_capture.start()
+    
+    try:
+        while t_transcribe.is_alive() and t_capture.is_alive():
+            # 主執行緒僅負責監聽 Ctrl+C 並維持程式運作
+            # 這裡可以定期顯示「等待說話」，但為了不跟辨識輸出衝突，
+            # 我們讓辨識執行緒負責輸出狀態
+            time.sleep(0.1)
+            
+            # 如果佇列空閒，顯示等待中
+            if transcription_queue.empty():
+                 sys.stdout.write("🎤 等待說話...\r")
+                 sys.stdout.flush()
     
     except KeyboardInterrupt:
         print("\n\n正在關閉...")
+        stop_event.set()
     
-    finally:
-        stream.stop_stream()
-        stream.close()
-        audio.terminate()
-        print("已停止")
+    # 等待執行緒結束
+    t_capture.join(timeout=2.0)
+    t_transcribe.join(timeout=2.0)
+    print("已停止")
 
 
 if __name__ == "__main__":
