@@ -7,9 +7,5 @@ dependencies = [
     "mlx-whisper",
     "pyaudio",
     "numpy",
-]
-
-[project.optional-dependencies]
-subtitle = [
     "pyobjc-framework-Cocoa",
 ]
