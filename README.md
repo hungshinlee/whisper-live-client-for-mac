@@ -63,7 +63,7 @@ brew install ffmpeg portaudio
 git clone https://github.com/hungshinlee/whisper-live-client-for-mac.git
 cd whisper-live-client-for-mac
 uv venv
-uv pip install mlx-whisper pyaudio numpy
+uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa
 ```
 
 ### 3. 開始使用
@@ -100,21 +100,15 @@ uv run python realtime.py --list
 
 適用於 Google Slides、PowerPoint、Keynote 等全螢幕簡報時顯示即時字幕。
 
-### 設置與使用
-
 ```bash
-cd subtitle
-uv venv
-uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa
-
 # 基本使用
-uv run python subtitle.py
+uv run python subtitle/subtitle.py
 
 # 翻譯成英文
-uv run python subtitle.py --task translate
+uv run python subtitle/subtitle.py --task translate
 
 # 使用較小的模型
-uv run python subtitle.py --model mlx-community/whisper-medium-mlx
+uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
 ```
 
 ### 特色

@@ -11,34 +11,25 @@
 - ✅ 使用 Apple Silicon GPU 加速
 - ✅ 可自訂視窗大小、字體大小、顏色
 
-## 設置
-
-```bash
-# 從專案根目錄進入 subtitle 目錄
-cd subtitle
-
-# 建立虛擬環境並安裝依賴
-uv venv
-uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa
-```
-
 ## 使用方式
+
+請先完成[主 README](../README.md) 的環境設置，然後執行：
 
 ```bash
 # 基本使用（使用預設模型）
-uv run python subtitle.py
+uv run python subtitle/subtitle.py
 
 # 翻譯成英文
-uv run python subtitle.py --task translate
+uv run python subtitle/subtitle.py --task translate
 
 # 使用較小的模型（適合 M1/M2）
-uv run python subtitle.py --model mlx-community/whisper-medium-mlx
+uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
 
 # 指定語言
-uv run python subtitle.py --language zh
+uv run python subtitle/subtitle.py --language zh
 
 # 列出可用模型
-uv run python subtitle.py --list
+uv run python subtitle/subtitle.py --list
 ```
 
 ## 參數說明
@@ -60,7 +51,7 @@ uv run python subtitle.py --list
 
 ## 自訂設定
 
-編輯 `subtitle.py` 開頭的設定區塊：
+編輯 `subtitle/subtitle.py` 開頭的設定區塊：
 
 ### 視窗設定
 
@@ -108,8 +99,6 @@ SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
 ### 安裝擴展漢字字體
 
 ```bash
-# 回到專案根目錄執行
-cd ..
 ./install_fonts.sh
 ```
 
@@ -119,7 +108,7 @@ cd ..
 
 ### 設定字幕視窗字體
 
-編輯 `subtitle.py`，修改 `FONT_NAME`：
+編輯 `subtitle/subtitle.py`，修改 `FONT_NAME`：
 
 ```python
 FONT_NAME = "HanaMinA"           # 花園明朝
@@ -147,7 +136,7 @@ FONT_NAME = "Noto Sans CJK TC"   # 思源黑體
 
 使用較小的模型：
 ```bash
-uv run python subtitle.py --model mlx-community/whisper-medium-mlx
+uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
 ```
 
 ### 顯示方塊字（豆腐字）

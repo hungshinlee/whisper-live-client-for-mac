@@ -2,21 +2,21 @@
 即時字幕浮動視窗 - macOS 原生版本
 使用 PyObjC 確保在全螢幕簡報上方也能顯示
 
-使用方式:
+使用方式（從專案根目錄執行）:
   # 使用預設模型
-  uv run python subtitle.py
+  uv run python subtitle/subtitle.py
   
   # 指定模型
-  uv run python subtitle.py --model mlx-community/whisper-medium-mlx
+  uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
   
   # 翻譯成英文
-  uv run python subtitle.py --task translate
+  uv run python subtitle/subtitle.py --task translate
   
   # 指定語言
-  uv run python subtitle.py --language zh
+  uv run python subtitle/subtitle.py --language zh
   
   # 列出可用模型
-  uv run python subtitle.py --list
+  uv run python subtitle/subtitle.py --list
 """
 import argparse
 import signal
