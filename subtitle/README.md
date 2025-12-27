@@ -14,44 +14,38 @@
 ## 設置
 
 ```bash
+# 從專案根目錄進入 subtitle 目錄
 cd subtitle
+
+# 建立虛擬環境並安裝依賴
 uv venv
 uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa
 ```
 
 ## 使用方式
 
-### 基本使用
-
 ```bash
-# 使用預設模型
+# 基本使用（使用預設模型）
 uv run python subtitle.py
-
-# 列出可用模型
-uv run python subtitle.py --list
-```
-
-### 指定選項
-
-```bash
-# 使用較小的模型（適合 M1/M2）
-uv run python subtitle.py --model mlx-community/whisper-medium-mlx
 
 # 翻譯成英文
 uv run python subtitle.py --task translate
 
+# 使用較小的模型（適合 M1/M2）
+uv run python subtitle.py --model mlx-community/whisper-medium-mlx
+
 # 指定語言
 uv run python subtitle.py --language zh
 
-# 組合使用
-uv run python subtitle.py -m mlx-community/whisper-medium-mlx -l zh -t transcribe
+# 列出可用模型
+uv run python subtitle.py --list
 ```
 
 ## 參數說明
 
 | 參數 | 簡寫 | 說明 | 預設值 |
 |------|------|------|--------|
-| `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `mlx-community/whisper-large-v3-mlx` |
+| `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `whisper-large-v3-mlx` |
 | `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
 | `--list` | | 列出可用模型 | |
@@ -66,29 +60,23 @@ uv run python subtitle.py -m mlx-community/whisper-medium-mlx -l zh -t transcrib
 
 ## 自訂設定
 
-編輯 `subtitle.py` 開頭的設定：
+編輯 `subtitle.py` 開頭的設定區塊：
 
 ### 視窗設定
 
 ```python
-WINDOW_WIDTH_RATIO = 0.8      # 視窗寬度佔螢幕比例 (0.0 ~ 1.0)
-WINDOW_HEIGHT = 100           # 視窗高度 (像素)
-WINDOW_BOTTOM_MARGIN = 50     # 視窗距離螢幕底部的距離 (像素)
-WINDOW_OPACITY = 0.85         # 視窗透明度 (0.0 ~ 1.0)
+WINDOW_WIDTH_RATIO = 0.8      # 視窗寬度佔螢幕比例
+WINDOW_HEIGHT = 100           # 視窗高度（像素）
+WINDOW_BOTTOM_MARGIN = 50     # 距離螢幕底部的距離
+WINDOW_OPACITY = 0.85         # 透明度（0.0~1.0）
 ```
 
 ### 文字設定
 
 ```python
-FONT_SIZE = 48                # 字體大小 (像素)
-FONT_NAME = None              # 字體名稱，None 為系統預設粗體
-```
-
-### 顏色設定
-
-```python
-BACKGROUND_COLOR = (0.1, 0.1, 0.1)  # 背景顏色 (R, G, B)
-TEXT_COLOR = "white"                 # 文字顏色：white / yellow / green / cyan
+FONT_SIZE = 48                # 字體大小
+FONT_NAME = None              # 字體名稱，None 為系統預設
+TEXT_COLOR = "white"          # 文字顏色：white/yellow/green/cyan
 ```
 
 ### 錄音設定
@@ -111,21 +99,6 @@ SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
 | 環境吵雜 | `SILENCE_THRESHOLD = 800` |
 | 說話較快 | `SILENCE_DURATION = 0.8` |
 
-## 簡報流程建議
-
-1. 啟動字幕程式：
-   ```bash
-   uv run python subtitle.py
-   ```
-
-2. 等待模型載入完成
-
-3. 調整字幕視窗位置
-
-4. 開始全螢幕簡報
-
-5. 正常說話，字幕會自動顯示
-
 ## 疑難排解
 
 ### 麥克風沒有反應
@@ -134,11 +107,11 @@ SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
 
 ### 環境太吵
 
-提高 `SILENCE_THRESHOLD` 的值，例如 `800` 或 `1000`。
+提高 `SILENCE_THRESHOLD`，例如 `800` 或 `1000`。
 
 ### 字幕更新太慢
 
-降低 `SILENCE_DURATION` 的值，例如 `0.8` 或 `1.0`。
+降低 `SILENCE_DURATION`，例如 `0.8` 或 `1.0`。
 
 ### 模型太慢
 

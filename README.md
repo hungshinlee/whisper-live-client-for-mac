@@ -69,24 +69,7 @@ uv pip install mlx-whisper pyaudio numpy
 ### 3. 開始使用
 
 ```bash
-# 最簡單：直接執行（使用預設模型，首次會自動下載）
-uv run python realtime.py
-
-# 翻譯成英文
-uv run python realtime.py --task translate
-
-# 指定語言
-uv run python realtime.py --language zh
-```
-
----
-
-## 🎤 即時語音辨識
-
-### 基本使用
-
-```bash
-# 使用預設模型（whisper-large-v3-mlx）
+# 最簡單：直接執行（使用預設模型，首次會自動下載約 3GB）
 uv run python realtime.py
 
 # 翻譯成英文
@@ -94,38 +77,19 @@ uv run python realtime.py --task translate
 
 # 指定語言為中文
 uv run python realtime.py --language zh
-```
 
-### 使用不同模型
-
-```bash
-# 使用較小的模型（適合 M1/M2）
+# 使用較小的模型（適合 M1/M2，約 1.5GB）
 uv run python realtime.py --model mlx-community/whisper-medium-mlx
-
-# 使用 small 模型
-uv run python realtime.py --model mlx-community/whisper-small-mlx
 
 # 列出可用模型
 uv run python realtime.py --list
-```
-
-### 使用本地轉換的模型
-
-```bash
-# 先轉換模型
-cd convert
-./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
-
-# 使用轉換後的模型
-cd ..
-uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
 ```
 
 ### 參數說明
 
 | 參數 | 簡寫 | 說明 | 預設值 |
 |------|------|------|--------|
-| `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `mlx-community/whisper-large-v3-mlx` |
+| `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `whisper-large-v3-mlx` |
 | `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
 | `--list` | | 列出可用模型 | |
@@ -136,17 +100,13 @@ uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
 
 適用於 Google Slides、PowerPoint、Keynote 等全螢幕簡報時顯示即時字幕。
 
-### 設置
+### 設置與使用
 
 ```bash
 cd subtitle
 uv venv
 uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa
-```
 
-### 使用
-
-```bash
 # 基本使用
 uv run python subtitle.py
 
@@ -195,18 +155,19 @@ uv run python subtitle.py --model mlx-community/whisper-medium-mlx
 
 ## 轉換自訂模型
 
-可以將 HuggingFace 上的任何 Whisper 模型轉換為 MLX 格式：
+如果需要使用 HuggingFace 上的其他 Whisper 模型（如特定語言的微調模型），可以轉換為 MLX 格式：
 
 ```bash
 cd convert
 ./convert.sh <hf-repo>
 
-# 範例
+# 範例：臺灣客語模型
 ./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
-./convert.sh openai/whisper-large-v3
-```
 
-轉換後的模型存放在 `models/` 目錄。
+# 使用轉換後的模型
+cd ..
+uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
+```
 
 詳細說明請看 [convert/README.md](convert/README.md)
 
@@ -220,7 +181,6 @@ cd convert
 | 英文 | `en` |
 | 日文 | `ja` |
 | 韓文 | `ko` |
-| 臺灣客語 | `zh`（使用專用模型）|
 | 自動偵測 | 不設定 |
 
 ---
@@ -244,15 +204,13 @@ cd convert
 
 ### brew 指令找不到
 
-如果出現 `command not found: brew`，請確認 Homebrew 已正確安裝並加入 PATH：
-
 ```bash
 eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
 
 ### uv 指令找不到
 
-如果出現 `command not found: uv`，請重新開啟終端機，或執行：
+重新開啟終端機，或執行：
 
 ```bash
 source ~/.zshrc
