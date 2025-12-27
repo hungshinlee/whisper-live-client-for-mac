@@ -7,6 +7,7 @@
 - ✅ 即時語音轉文字（Transcribe）
 - ✅ 即時語音翻譯成英文（Translate）
 - ✅ Apple Silicon GPU 加速
+- ✅ **Silero VAD** - 智慧語音偵測，自動過濾背景噪音
 - ✅ 支援 HuggingFace 上的任何 Whisper 模型
 - ✅ **浮動字幕視窗** - 適用於全螢幕簡報
 
@@ -63,7 +64,7 @@ brew install ffmpeg portaudio
 git clone https://github.com/hungshinlee/whisper-live-client-for-mac.git
 cd whisper-live-client-for-mac
 uv venv
-uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa
+uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa pysilero-vad
 ```
 
 ### 3. 開始使用
@@ -92,7 +93,24 @@ uv run python realtime.py --list
 | `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `whisper-large-v3-mlx` |
 | `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
+| `--silence-duration` | | 語音結束後的靜音時長（秒）| `1.0` |
+| `--no-vad` | | 不使用 Silero VAD | |
 | `--list` | | 列出可用模型 | |
+
+---
+
+## 🎙️ Silero VAD 智慧語音偵測
+
+本專案使用 [Silero VAD](https://github.com/snakers4/silero-vad) 進行語音活動偵測，相比傳統的音量門檻方式有以下優勢：
+
+| 特性 | Silero VAD | 傳統音量門檻 |
+|------|------------|--------------|
+| 區分人聲/噪音 | ✅ 能準確區分 | ❌ 無法區分 |
+| 背景噪音 | ✅ 自動過濾鍵盤聲、空調聲等 | ❌ 需手動調整門檻 |
+| 說話中短暫停頓 | ✅ 能正確處理 | ❌ 可能誤判為結束 |
+| 使用體驗 | ✅ 免調參數 | ❌ 需根據環境調整 |
+
+如果遇到問題，可以使用 `--no-vad` 切換回傳統方式。
 
 ---
 
@@ -235,6 +253,10 @@ uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
 - 減少背景噪音
 - 嘗試使用更大的模型
 
+### VAD 偵測不準確
+
+嘗試調整 `--silence-duration` 參數，或使用 `--no-vad` 切換回傳統音量門檻方式。
+
 ### 顯示方塊字（豆腐字）
 
 部分漢字（如臺灣客語）需要擴展字體支援：
@@ -267,6 +289,7 @@ source ~/.zshrc
 whisper-live-client-for-mac/
 ├── README.md
 ├── realtime.py           # 即時語音辨識（主程式）
+├── vad.py                # Silero VAD 模組
 ├── install_fonts.sh      # 安裝擴展漢字字體
 ├── convert/              # 模型轉換工具
 │   ├── convert.sh

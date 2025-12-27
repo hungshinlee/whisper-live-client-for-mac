@@ -5,6 +5,7 @@
 ## 特色
 
 - ✅ 即時語音辨識 / 翻譯成英文
+- ✅ **Silero VAD** 智慧語音偵測
 - ✅ 浮動視窗，始終在最上層
 - ✅ 支援全螢幕模式（Google Slides、PowerPoint、Keynote）
 - ✅ 可拖動調整位置
@@ -39,6 +40,8 @@ uv run python subtitle/subtitle.py --list
 | `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `whisper-large-v3-mlx` |
 | `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
+| `--silence-duration` | | 語音結束後的靜音時長（秒）| `1.0` |
+| `--no-vad` | | 不使用 Silero VAD | |
 | `--list` | | 列出可用模型 | |
 
 ## 操作說明
@@ -70,13 +73,6 @@ FONT_NAME = None              # 字體名稱，None 為系統預設
 TEXT_COLOR = "white"          # 文字顏色：white/yellow/green/cyan
 ```
 
-### 錄音設定
-
-```python
-SILENCE_THRESHOLD = 500       # 靜音門檻
-SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
-```
-
 ## 常見調整
 
 | 需求 | 修改 |
@@ -87,8 +83,6 @@ SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
 | 視窗更窄 | `WINDOW_WIDTH_RATIO = 0.6` |
 | 黃色字幕 | `TEXT_COLOR = "yellow"` |
 | 更透明 | `WINDOW_OPACITY = 0.7` |
-| 環境吵雜 | `SILENCE_THRESHOLD = 800` |
-| 說話較快 | `SILENCE_DURATION = 0.8` |
 
 ---
 
@@ -124,13 +118,19 @@ FONT_NAME = "Noto Sans CJK TC"   # 思源黑體
 
 **系統設定** → **隱私與安全性** → **麥克風** → 勾選終端機
 
-### 環境太吵
-
-提高 `SILENCE_THRESHOLD`，例如 `800` 或 `1000`。
-
 ### 字幕更新太慢
 
-降低 `SILENCE_DURATION`，例如 `0.8` 或 `1.0`。
+降低 `--silence-duration`，例如：
+```bash
+uv run python subtitle/subtitle.py --silence-duration 0.8
+```
+
+### VAD 偵測不準確
+
+使用 `--no-vad` 切換回傳統音量門檻方式：
+```bash
+uv run python subtitle/subtitle.py --no-vad
+```
 
 ### 模型太慢
 

@@ -27,6 +27,10 @@ import pyaudio
 import mlx_whisper
 from pathlib import Path
 
+# 加入父目錄到 path 以便 import vad
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from vad import create_vad, VADConfig, HAS_SILERO
+
 import AppKit
 from AppKit import (
     NSApplication, NSWindow, NSTextField, NSColor, NSFont,
@@ -64,9 +68,7 @@ TEXT_COLOR = "white"          # white / yellow / green / cyan
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
-CHUNK = 1024
-SILENCE_THRESHOLD = 500
-SILENCE_DURATION = 1.2
+CHUNK = 512  # Silero VAD 需要特定大小
 
 # ===========================================
 # 預設設定
@@ -79,6 +81,8 @@ running = True
 model = None
 task = "transcribe"
 language = None
+use_silero_vad = True
+silence_duration = 1.0
 
 
 def list_local_models() -> list[str]:
@@ -205,39 +209,7 @@ class SubtitleWindow:
         AppHelper.callAfter(do_close)
 
 
-def get_audio_level(data):
-    samples = np.frombuffer(data, dtype=np.int16)
-    return np.abs(samples).mean()
-
-
-def record_until_silence(stream):
-    global running
-    frames = []
-    silent_chunks = 0
-    chunks_for_silence = int(SILENCE_DURATION * RATE / CHUNK)
-    is_speaking = False
-    
-    while running:
-        try:
-            data = stream.read(CHUNK, exception_on_overflow=False)
-        except:
-            break
-        level = get_audio_level(data)
-        
-        if level > SILENCE_THRESHOLD:
-            is_speaking = True
-            silent_chunks = 0
-            frames.append(data)
-        elif is_speaking:
-            frames.append(data)
-            silent_chunks += 1
-            if silent_chunks > chunks_for_silence:
-                break
-    
-    return b''.join(frames)
-
-
-def transcribe_audio(audio_data):
+def transcribe_audio(audio_data: bytes) -> str:
     global model, task, language
     
     audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
@@ -257,7 +229,7 @@ def transcribe_audio(audio_data):
 
 def audio_thread(subtitle_window):
     """錄音和辨識的執行緒"""
-    global running, model, task, language
+    global running, model, task, language, use_silero_vad, silence_duration
     
     audio = pyaudio.PyAudio()
     stream = audio.open(
@@ -277,16 +249,32 @@ def audio_thread(subtitle_window):
         warmup_kwargs["language"] = language
     mlx_whisper.transcribe(dummy, **warmup_kwargs)
     
+    # 建立 VAD
+    use_silero = use_silero_vad and HAS_SILERO
+    vad = create_vad(
+        use_silero=use_silero,
+        min_silence_duration=silence_duration,
+        silence_duration=silence_duration,
+        sample_rate=RATE,
+        chunk_size=CHUNK,
+    )
+    
     subtitle_window.update_text("🎤 準備就緒，開始說話...")
     
     try:
         while running:
-            audio_data = record_until_silence(stream)
+            try:
+                data = stream.read(CHUNK, exception_on_overflow=False)
+            except:
+                break
             
             if not running:
                 break
             
-            if len(audio_data) > CHUNK * 10:
+            # 使用 VAD 處理
+            audio_data = vad.process(data)
+            
+            if audio_data is not None and len(audio_data) > CHUNK * 10:
                 task_text = "翻譯" if task == "translate" else "辨識"
                 subtitle_window.update_text(f"⏳ {task_text}中...")
                 text = transcribe_audio(audio_data)
@@ -312,7 +300,7 @@ def signal_handler(signum, frame):
 
 
 def main():
-    global running, model, task, language
+    global running, model, task, language, use_silero_vad, silence_duration
     
     parser = argparse.ArgumentParser(
         description="即時字幕浮動視窗（Apple Silicon GPU 加速）",
@@ -320,16 +308,16 @@ def main():
         epilog="""
 範例:
   # 基本使用
-  uv run python subtitle.py
+  uv run python subtitle/subtitle.py
   
   # 翻譯成英文
-  uv run python subtitle.py --task translate
+  uv run python subtitle/subtitle.py --task translate
   
   # 使用較小的模型
-  uv run python subtitle.py --model mlx-community/whisper-medium-mlx
+  uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
   
   # 指定語言
-  uv run python subtitle.py --language zh
+  uv run python subtitle/subtitle.py --language zh
 """
     )
     parser.add_argument(
@@ -356,6 +344,17 @@ def main():
         action="store_true",
         help="列出可用的模型",
     )
+    parser.add_argument(
+        "--no-vad",
+        action="store_true",
+        help="不使用 Silero VAD（改用簡單音量門檻）",
+    )
+    parser.add_argument(
+        "--silence-duration",
+        type=float,
+        default=1.0,
+        help="語音結束後的靜音時長（秒），預設 1.0",
+    )
     
     args = parser.parse_args()
     
@@ -379,6 +378,8 @@ def main():
     model = resolve_model(args.model)
     task = args.task
     language = args.language
+    use_silero_vad = not args.no_vad
+    silence_duration = args.silence_duration
     
     # 顯示設定
     task_display = "轉錄" if task == "transcribe" else "翻譯成英文"
@@ -389,6 +390,10 @@ def main():
     else:
         model_display = Path(model).name
     
+    # 決定使用哪種 VAD
+    use_silero = use_silero_vad and HAS_SILERO
+    vad_display = "Silero VAD" if use_silero else "音量門檻"
+    
     print("=" * 50)
     print("即時字幕浮動視窗")
     print("使用 Apple Silicon GPU 加速")
@@ -396,6 +401,7 @@ def main():
     print(f"模型: {model_display}")
     print(f"任務: {task_display}")
     print(f"語言: {lang_display}")
+    print(f"VAD: {vad_display}")
     print("=" * 50)
     print(f"\n視窗設定：")
     print(f"  寬度：螢幕的 {int(WINDOW_WIDTH_RATIO * 100)}%")

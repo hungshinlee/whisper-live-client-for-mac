@@ -27,6 +27,8 @@ import pyaudio
 import mlx_whisper
 from pathlib import Path
 
+from vad import create_vad, VADConfig, HAS_SILERO
+
 # ===========================================
 # 預設設定
 # ===========================================
@@ -39,9 +41,7 @@ MODELS_DIR = Path(__file__).parent / "models"
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
-CHUNK = 1024
-SILENCE_THRESHOLD = 500
-SILENCE_DURATION = 1.5
+CHUNK = 512  # Silero VAD 需要特定大小，512 是 16kHz 下的標準值
 
 
 def list_local_models() -> list[str]:
@@ -92,37 +92,7 @@ def resolve_model(model_name: str | None) -> str:
     return f"mlx-community/{model_name}"
 
 
-def get_audio_level(data):
-    """計算音量"""
-    samples = np.frombuffer(data, dtype=np.int16)
-    return np.abs(samples).mean()
-
-
-def record_until_silence(stream):
-    """錄音直到靜音"""
-    frames = []
-    silent_chunks = 0
-    chunks_for_silence = int(SILENCE_DURATION * RATE / CHUNK)
-    is_speaking = False
-    
-    while True:
-        data = stream.read(CHUNK, exception_on_overflow=False)
-        level = get_audio_level(data)
-        
-        if level > SILENCE_THRESHOLD:
-            is_speaking = True
-            silent_chunks = 0
-            frames.append(data)
-        elif is_speaking:
-            frames.append(data)
-            silent_chunks += 1
-            if silent_chunks > chunks_for_silence:
-                break
-    
-    return b''.join(frames)
-
-
-def transcribe_audio(audio_data, model: str, language: str | None, task: str):
+def transcribe_audio(audio_data: bytes, model: str, language: str | None, task: str) -> str:
     """使用 MLX Whisper 辨識"""
     audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
     
@@ -191,6 +161,17 @@ def main():
         action="store_true",
         help="列出可用的本地模型",
     )
+    parser.add_argument(
+        "--no-vad",
+        action="store_true",
+        help="不使用 Silero VAD（改用簡單音量門檻）",
+    )
+    parser.add_argument(
+        "--silence-duration",
+        type=float,
+        default=1.0,
+        help="語音結束後的靜音時長（秒），預設 1.0",
+    )
     
     args = parser.parse_args()
     
@@ -228,6 +209,10 @@ def main():
         model_display = Path(model).name  # 本地模型
         model_source = "本地"
     
+    # 決定使用哪種 VAD
+    use_silero = not args.no_vad and HAS_SILERO
+    vad_display = "Silero VAD" if use_silero else "音量門檻"
+    
     print("=" * 50)
     print("MLX Whisper 即時語音辨識")
     print("使用 Apple Silicon GPU 加速")
@@ -235,10 +220,20 @@ def main():
     print(f"模型: {model_display} ({model_source})")
     print(f"任務: {task_display}")
     print(f"語言: {lang_display}")
+    print(f"VAD: {vad_display}")
     print("=" * 50)
     print("\n說話後，文字會即時顯示")
     print("按 Ctrl+C 停止\n")
     print("-" * 50)
+    
+    # 建立 VAD
+    vad = create_vad(
+        use_silero=use_silero,
+        min_silence_duration=args.silence_duration,
+        silence_duration=args.silence_duration,  # for SimpleVAD
+        sample_rate=RATE,
+        chunk_size=CHUNK,
+    )
     
     # 初始化 PyAudio
     audio = pyaudio.PyAudio()
@@ -263,9 +258,14 @@ def main():
     try:
         while True:
             print("🎤 等待說話...", end="\r")
-            audio_data = record_until_silence(stream)
             
-            if len(audio_data) > CHUNK * 10:
+            # 讀取音訊
+            data = stream.read(CHUNK, exception_on_overflow=False)
+            
+            # 使用 VAD 處理
+            audio_data = vad.process(data)
+            
+            if audio_data is not None and len(audio_data) > CHUNK * 10:
                 print("⏳ 辨識中...   ", end="\r")
                 text = transcribe_audio(audio_data, model, args.language, args.task)
                 if text:
