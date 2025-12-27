@@ -99,6 +99,30 @@ SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
 | 環境吵雜 | `SILENCE_THRESHOLD = 800` |
 | 說話較快 | `SILENCE_DURATION = 0.8` |
 
+---
+
+## 🔤 擴展漢字支援（臺灣客語等）
+
+臺灣客語使用的漢字有些在 CJK 擴展區，一般字體不支援，會顯示為方塊（豆腐字）。
+
+### 安裝擴展漢字字體
+
+```bash
+# 回到專案根目錄執行
+cd ..
+./install_fonts.sh
+```
+
+### 設定字幕視窗字體
+
+編輯 `subtitle.py`，修改 `FONT_NAME`：
+
+```python
+FONT_NAME = "HanaMinA"
+```
+
+---
+
 ## 疑難排解
 
 ### 麥克風沒有反應
@@ -119,3 +143,7 @@ SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
 ```bash
 uv run python subtitle.py --model mlx-community/whisper-medium-mlx
 ```
+
+### 顯示方塊字（豆腐字）
+
+安裝擴展漢字字體並設定 `FONT_NAME = "HanaMinA"`，詳見上方說明。
