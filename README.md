@@ -14,7 +14,6 @@
 
 - macOS（Apple Silicon：M1/M2/M3/M4）
 - Python 3.10+
-- Homebrew
 
 ---
 
@@ -22,11 +21,43 @@
 
 ### 1. 安裝系統依賴
 
+#### 安裝 Homebrew（如果尚未安裝）
+
+Homebrew 是 macOS 的套件管理器。開啟終端機，執行：
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+安裝完成後，依照終端機顯示的指示，將 Homebrew 加入 PATH。通常是執行：
+
+```bash
+echo >> ~/.zprofile
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+```
+
+#### 安裝 uv（Python 套件管理器）
+
+[uv](https://github.com/astral-sh/uv) 是一個快速的 Python 套件管理器：
+
+```bash
+brew install uv
+```
+
+或者使用官方安裝腳本：
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+#### 安裝音訊處理相關套件
+
 ```bash
 brew install ffmpeg portaudio
 ```
 
-### 2. 設置環境
+### 2. 下載專案並設置環境
 
 ```bash
 git clone https://github.com/hungshinlee/whisper-live-client-for-mac.git
@@ -210,6 +241,22 @@ cd convert
 - 說話清晰、語速適中
 - 減少背景噪音
 - 嘗試使用更大的模型
+
+### brew 指令找不到
+
+如果出現 `command not found: brew`，請確認 Homebrew 已正確安裝並加入 PATH：
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv)"
+```
+
+### uv 指令找不到
+
+如果出現 `command not found: uv`，請重新開啟終端機，或執行：
+
+```bash
+source ~/.zshrc
+```
 
 ---
 
