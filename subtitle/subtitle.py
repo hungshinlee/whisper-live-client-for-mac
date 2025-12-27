@@ -3,11 +3,11 @@
 使用 PyObjC 確保在全螢幕簡報上方也能顯示
 
 使用方式:
-  # 使用本地模型（自動偵測）
+  # 使用預設模型
   uv run python subtitle.py
   
   # 指定模型
-  uv run python subtitle.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
+  uv run python subtitle.py --model mlx-community/whisper-medium-mlx
   
   # 翻譯成英文
   uv run python subtitle.py --task translate
@@ -69,19 +69,19 @@ SILENCE_THRESHOLD = 500
 SILENCE_DURATION = 1.2
 
 # ===========================================
-# 路徑設定
+# 預設設定
 # ===========================================
-SCRIPT_DIR = Path(__file__).parent
-MODELS_DIR = SCRIPT_DIR.parent / "models"
+DEFAULT_HF_MODEL = "mlx-community/whisper-large-v3-mlx"
+MODELS_DIR = Path(__file__).parent.parent / "models"
 
 # 全域變數
 running = True
-model_path = None
+model = None
 task = "transcribe"
 language = None
 
 
-def list_available_models() -> list[str]:
+def list_local_models() -> list[str]:
     """列出所有可用的本地模型"""
     if not MODELS_DIR.exists():
         return []
@@ -97,17 +97,28 @@ def list_available_models() -> list[str]:
     return sorted(models)
 
 
-def get_model_path(model_name: str) -> Path:
-    """取得模型路徑"""
-    if "/" in model_name or model_name.startswith("."):
-        return Path(model_name)
+def resolve_model(model_name: str | None) -> str:
+    """解析模型名稱，返回可用的模型路徑或 HF repo"""
+    
+    if model_name is None:
+        local_models = list_local_models()
+        if local_models:
+            return str(MODELS_DIR / local_models[0])
+        return DEFAULT_HF_MODEL
+    
+    if "/" in model_name:
+        return model_name
     
     model_path = MODELS_DIR / model_name
+    if model_path.exists():
+        return str(model_path)
     
-    if not model_path.exists() and not model_name.endswith("-mlx"):
+    if not model_name.endswith("-mlx"):
         model_path = MODELS_DIR / f"{model_name}-mlx"
+        if model_path.exists():
+            return str(model_path)
     
-    return model_path
+    return f"mlx-community/{model_name}"
 
 
 def get_text_color():
@@ -227,12 +238,12 @@ def record_until_silence(stream):
 
 
 def transcribe_audio(audio_data):
-    global model_path, task, language
+    global model, task, language
     
     audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
     
     kwargs = {
-        "path_or_hf_repo": str(model_path),
+        "path_or_hf_repo": model,
         "task": task,
     }
     
@@ -246,7 +257,7 @@ def transcribe_audio(audio_data):
 
 def audio_thread(subtitle_window):
     """錄音和辨識的執行緒"""
-    global running, model_path, task, language
+    global running, model, task, language
     
     audio = pyaudio.PyAudio()
     stream = audio.open(
@@ -261,7 +272,7 @@ def audio_thread(subtitle_window):
     
     # 預熱模型
     dummy = np.zeros(RATE, dtype=np.float32)
-    warmup_kwargs = {"path_or_hf_repo": str(model_path), "task": task}
+    warmup_kwargs = {"path_or_hf_repo": model, "task": task}
     if language:
         warmup_kwargs["language"] = language
     mlx_whisper.transcribe(dummy, **warmup_kwargs)
@@ -301,91 +312,71 @@ def signal_handler(signum, frame):
 
 
 def main():
-    global running, model_path, task, language
+    global running, model, task, language
     
     parser = argparse.ArgumentParser(
-        description="即時字幕浮動視窗（使用本地 MLX 模型）",
+        description="即時字幕浮動視窗（Apple Silicon GPU 加速）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 範例:
-  # 基本使用（自動偵測語言，純轉錄）
+  # 基本使用
   uv run python subtitle.py
   
   # 翻譯成英文
   uv run python subtitle.py --task translate
   
-  # 指定語言為中文
-  uv run python subtitle.py --language zh
+  # 使用較小的模型
+  uv run python subtitle.py --model mlx-community/whisper-medium-mlx
   
-  # 使用特定模型
-  uv run python subtitle.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
+  # 指定語言
+  uv run python subtitle.py --language zh
 """
     )
     parser.add_argument(
         "--model", "-m",
         type=str,
         default=None,
-        help="模型名稱或路徑（預設：使用第一個可用的本地模型）",
+        help="模型名稱：HF repo 或本地模型名稱",
     )
     parser.add_argument(
         "--task", "-t",
         type=str,
         choices=["transcribe", "translate"],
         default="transcribe",
-        help="任務類型：transcribe（轉錄）或 translate（翻譯成英文）（預設：transcribe）",
+        help="任務：transcribe（轉錄）或 translate（翻譯成英文）",
     )
     parser.add_argument(
         "--language", "-l",
         type=str,
         default=None,
-        help="語言代碼，如 zh, en, ja（預設：自動偵測）",
+        help="語言代碼（如 zh, en, ja）",
     )
     parser.add_argument(
         "--list",
         action="store_true",
-        help="列出可用的本地模型",
+        help="列出可用的模型",
     )
     
     args = parser.parse_args()
     
     # 列出模型
     if args.list:
-        models = list_available_models()
-        if models:
-            print("可用的本地模型:")
-            for m in models:
+        local_models = list_local_models()
+        print("本地模型:")
+        if local_models:
+            for m in local_models:
                 print(f"  • {m}")
         else:
-            print("尚未有轉換的模型")
-            print(f"\n請先使用 convert/convert.sh 轉換模型:")
-            print(f"  cd ../convert")
-            print(f"  ./convert.sh <hf-repo>")
+            print("  （無）")
+        print()
+        print("HuggingFace 模型:")
+        print("  • mlx-community/whisper-large-v3-mlx")
+        print("  • mlx-community/whisper-medium-mlx")
+        print("  • mlx-community/whisper-small-mlx")
         return
     
-    # 取得模型
-    available_models = list_available_models()
-    
-    if args.model:
-        model_path = get_model_path(args.model)
-    elif available_models:
-        model_path = MODELS_DIR / available_models[0]
-    else:
-        print("錯誤：找不到任何本地模型")
-        print(f"\n請先轉換模型:")
-        print(f"  cd ../convert")
-        print(f"  ./convert.sh <hf-repo>")
-        sys.exit(1)
-    
-    # 檢查模型是否存在
-    if not model_path.exists():
-        print(f"錯誤：找不到模型 {model_path}")
-        if available_models:
-            print(f"\n可用的模型:")
-            for m in available_models:
-                print(f"  • {m}")
-        sys.exit(1)
-    
-    # 設定全域變數
+    # 解析模型
+    model = resolve_model(args.model)
     task = args.task
     language = args.language
     
@@ -393,11 +384,16 @@ def main():
     task_display = "轉錄" if task == "transcribe" else "翻譯成英文"
     lang_display = language if language else "自動偵測"
     
+    if "/" in model and not model.startswith("/"):
+        model_display = model
+    else:
+        model_display = Path(model).name
+    
     print("=" * 50)
-    print("即時字幕浮動視窗 (macOS 原生版)")
+    print("即時字幕浮動視窗")
     print("使用 Apple Silicon GPU 加速")
     print("=" * 50)
-    print(f"模型: {model_path.name}")
+    print(f"模型: {model_display}")
     print(f"任務: {task_display}")
     print(f"語言: {lang_display}")
     print("=" * 50)

@@ -69,44 +69,8 @@ uv pip install mlx-whisper pyaudio numpy
 ### 3. 開始使用
 
 ```bash
-# 純轉錄（使用 whisper-large-v3，會自動下載）
-uv run python transcribe_only.py
-
-# 翻譯成英文
-uv run python transcribe.py
-```
-
----
-
-## 🎤 即時語音辨識
-
-### 使用 HuggingFace 模型（自動下載）
-
-最簡單的方式，不需要轉換模型：
-
-```bash
-# 純轉錄
-uv run python transcribe_only.py
-
-# 翻譯成英文
-uv run python transcribe.py
-```
-
-### 使用本地轉換的模型
-
-如果你需要使用特定的微調模型（如臺灣客語），可以先轉換再使用：
-
-```bash
-# 轉換模型
-cd convert
-./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
-
-# 使用轉換後的模型
-cd ..
+# 最簡單：直接執行（使用預設模型，首次會自動下載）
 uv run python realtime.py
-
-# 指定模型
-uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
 
 # 翻譯成英文
 uv run python realtime.py --task translate
@@ -115,11 +79,53 @@ uv run python realtime.py --task translate
 uv run python realtime.py --language zh
 ```
 
+---
+
+## 🎤 即時語音辨識
+
+### 基本使用
+
+```bash
+# 使用預設模型（whisper-large-v3-mlx）
+uv run python realtime.py
+
+# 翻譯成英文
+uv run python realtime.py --task translate
+
+# 指定語言為中文
+uv run python realtime.py --language zh
+```
+
+### 使用不同模型
+
+```bash
+# 使用較小的模型（適合 M1/M2）
+uv run python realtime.py --model mlx-community/whisper-medium-mlx
+
+# 使用 small 模型
+uv run python realtime.py --model mlx-community/whisper-small-mlx
+
+# 列出可用模型
+uv run python realtime.py --list
+```
+
+### 使用本地轉換的模型
+
+```bash
+# 先轉換模型
+cd convert
+./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
+
+# 使用轉換後的模型
+cd ..
+uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
+```
+
 ### 參數說明
 
 | 參數 | 簡寫 | 說明 | 預設值 |
 |------|------|------|--------|
-| `--model` | `-m` | 模型名稱或路徑 | 第一個可用模型 |
+| `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `mlx-community/whisper-large-v3-mlx` |
 | `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
 | `--list` | | 列出可用模型 | |
@@ -147,8 +153,8 @@ uv run python subtitle.py
 # 翻譯成英文
 uv run python subtitle.py --task translate
 
-# 指定模型
-uv run python subtitle.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
+# 使用較小的模型
+uv run python subtitle.py --model mlx-community/whisper-medium-mlx
 ```
 
 ### 特色
@@ -184,12 +190,6 @@ uv run python subtitle.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
 | `mlx-community/whisper-small-mlx` | ~488 MB | ✅ | 全部 |
 | `mlx-community/whisper-base-mlx` | ~145 MB | ✅ | 全部 |
 | `mlx-community/whisper-tiny-mlx` | ~75 MB | ✅ | 全部 |
-
-如需使用較小的模型，修改 `transcribe.py` 或 `transcribe_only.py` 中的 `MODEL_NAME`：
-
-```python
-MODEL_NAME = "mlx-community/whisper-medium-mlx"
-```
 
 ---
 
@@ -265,9 +265,7 @@ source ~/.zshrc
 ```
 whisper-live-client-for-mac/
 ├── README.md
-├── transcribe.py         # 翻譯成英文（HF 模型）
-├── transcribe_only.py    # 純轉錄（HF 模型）
-├── realtime.py           # 即時辨識（本地模型）
+├── realtime.py           # 即時語音辨識（主程式）
 ├── convert/              # 模型轉換工具
 │   ├── convert.sh
 │   └── convert.py

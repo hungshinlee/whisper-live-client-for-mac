@@ -24,7 +24,7 @@ uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa
 ### 基本使用
 
 ```bash
-# 使用第一個可用的本地模型
+# 使用預設模型
 uv run python subtitle.py
 
 # 列出可用模型
@@ -34,8 +34,8 @@ uv run python subtitle.py --list
 ### 指定選項
 
 ```bash
-# 指定模型
-uv run python subtitle.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
+# 使用較小的模型（適合 M1/M2）
+uv run python subtitle.py --model mlx-community/whisper-medium-mlx
 
 # 翻譯成英文
 uv run python subtitle.py --task translate
@@ -44,14 +44,14 @@ uv run python subtitle.py --task translate
 uv run python subtitle.py --language zh
 
 # 組合使用
-uv run python subtitle.py -m whisper-large-v2-taiwanese-hakka-v1-mlx -l zh -t transcribe
+uv run python subtitle.py -m mlx-community/whisper-medium-mlx -l zh -t transcribe
 ```
 
 ## 參數說明
 
 | 參數 | 簡寫 | 說明 | 預設值 |
 |------|------|------|--------|
-| `--model` | `-m` | 模型名稱或路徑 | 第一個可用模型 |
+| `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `mlx-community/whisper-large-v3-mlx` |
 | `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
 | `--list` | | 列出可用模型 | |
@@ -113,16 +113,12 @@ SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
 
 ## 簡報流程建議
 
-1. 先轉換模型（如果需要的話）：
-   ```bash
-   cd ../convert
-   ./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
-   ```
-
-2. 啟動字幕程式：
+1. 啟動字幕程式：
    ```bash
    uv run python subtitle.py
    ```
+
+2. 等待模型載入完成
 
 3. 調整字幕視窗位置
 
@@ -131,14 +127,6 @@ SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
 5. 正常說話，字幕會自動顯示
 
 ## 疑難排解
-
-### 找不到模型
-
-請先轉換模型：
-```bash
-cd ../convert
-./convert.sh <hf-repo>
-```
 
 ### 麥克風沒有反應
 
@@ -151,3 +139,10 @@ cd ../convert
 ### 字幕更新太慢
 
 降低 `SILENCE_DURATION` 的值，例如 `0.8` 或 `1.0`。
+
+### 模型太慢
+
+使用較小的模型：
+```bash
+uv run python subtitle.py --model mlx-community/whisper-medium-mlx
+```
