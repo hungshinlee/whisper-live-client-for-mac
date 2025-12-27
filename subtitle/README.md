@@ -5,9 +5,9 @@
 ## 特色
 
 - ✅ 即時語音辨識 / 翻譯成英文
-- ✅ **Silero VAD** 智慧語音偵測
 - ✅ 浮動視窗，始終在最上層
 - ✅ 支援全螢幕模式（Google Slides、PowerPoint、Keynote）
+- ✅ **多行顯示**，最新字幕在最下方（捲動效果）
 - ✅ 可拖動調整位置
 - ✅ 使用 Apple Silicon GPU 加速
 - ✅ 可自訂視窗大小、字體大小、顏色
@@ -72,7 +72,8 @@ uv run python subtitle/subtitle.py --silence-duration 0.6 --min-speech-duration 
 2. **拖動**字幕視窗可移動位置
 3. 開始全螢幕簡報
 4. 對著麥克風說話，字幕會即時顯示
-5. 按 **Ctrl+C** 關閉程式
+5. 最新的字幕會在最下方，舊的往上捲動
+6. 按 **Ctrl+C** 關閉程式
 
 ## 自訂設定
 
@@ -82,7 +83,6 @@ uv run python subtitle/subtitle.py --silence-duration 0.6 --min-speech-duration 
 
 ```python
 WINDOW_WIDTH_RATIO = 0.8      # 視窗寬度佔螢幕比例
-WINDOW_HEIGHT = 100           # 視窗高度（像素）
 WINDOW_BOTTOM_MARGIN = 50     # 距離螢幕底部的距離
 WINDOW_OPACITY = 0.85         # 透明度（0.0~1.0）
 ```
@@ -90,8 +90,10 @@ WINDOW_OPACITY = 0.85         # 透明度（0.0~1.0）
 ### 文字設定
 
 ```python
-FONT_SIZE = 48                # 字體大小
+FONT_SIZE = 36                # 字體大小
 FONT_NAME = None              # 字體名稱，None 為系統預設
+MAX_LINES = 3                 # 顯示行數（最新的文字在最下面）
+LINE_HEIGHT = 1.3             # 行高倍率
 TEXT_COLOR = "white"          # 文字顏色：white/yellow/green/cyan
 ```
 
@@ -99,9 +101,10 @@ TEXT_COLOR = "white"          # 文字顏色：white/yellow/green/cyan
 
 | 需求 | 修改 |
 |------|------|
-| 字更大 | `FONT_SIZE = 56` |
-| 字更小 | `FONT_SIZE = 36` |
-| 視窗更高 | `WINDOW_HEIGHT = 150` |
+| 字更大 | `FONT_SIZE = 48` |
+| 字更小 | `FONT_SIZE = 28` |
+| 顯示更多行 | `MAX_LINES = 5` |
+| 只顯示一行 | `MAX_LINES = 1` |
 | 視窗更窄 | `WINDOW_WIDTH_RATIO = 0.6` |
 | 黃色字幕 | `TEXT_COLOR = "yellow"` |
 | 更透明 | `WINDOW_OPACITY = 0.7` |

@@ -7,7 +7,6 @@
 - ✅ 即時語音轉文字（Transcribe）
 - ✅ 即時語音翻譯成英文（Translate）
 - ✅ Apple Silicon GPU 加速
-- ✅ **Silero VAD** - 智慧語音偵測，自動過濾背景噪音
 - ✅ 支援 HuggingFace 上的任何 Whisper 模型
 - ✅ **浮動字幕視窗** - 適用於全螢幕簡報
 
@@ -131,19 +130,6 @@ uv run python realtime.py --silence-duration 0.6 --min-speech-duration 0.2
 
 ---
 
-## 🎙️ Silero VAD 智慧語音偵測
-
-本專案使用 [Silero VAD](https://github.com/snakers4/silero-vad) 進行語音活動偵測，相比傳統的音量門檻方式有以下優勢：
-
-| 特性 | Silero VAD | 傳統音量門檻 |
-|------|------------|--------------|
-| 區分人聲/噪音 | ✅ 能準確區分 | ❌ 無法區分 |
-| 背景噪音 | ✅ 自動過濾鍵盤聲、空調聲等 | ❌ 需手動調整門檻 |
-| 說話中短暫停頓 | ✅ 能正確處理 | ❌ 可能誤判為結束 |
-| 使用體驗 | ✅ 預設參數即可使用 | ❌ 需根據環境調整 |
-
----
-
 ## 🖥️ 浮動字幕視窗
 
 適用於 Google Slides、PowerPoint、Keynote 等全螢幕簡報時顯示即時字幕。
@@ -167,6 +153,7 @@ uv run python subtitle/subtitle.py --silence-duration 0.6
 - 字幕視窗始終在最上層（包括全螢幕應用上方）
 - 可拖動調整位置
 - 可自訂視窗大小、字體、顏色
+- 支援多行顯示，最新字幕在最下方
 
 詳細說明請看 [subtitle/README.md](subtitle/README.md)
 

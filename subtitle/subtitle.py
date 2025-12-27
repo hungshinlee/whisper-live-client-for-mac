@@ -22,6 +22,7 @@ import argparse
 import signal
 import sys
 import threading
+from collections import deque
 import numpy as np
 import pyaudio
 import mlx_whisper
@@ -46,15 +47,16 @@ from PyObjCTools import AppHelper
 # 📐 視窗設定（可自行調整）
 # ===========================================
 WINDOW_WIDTH_RATIO = 0.8      # 視窗寬度佔螢幕比例 (0.0 ~ 1.0)
-WINDOW_HEIGHT = 100           # 視窗高度 (像素)
 WINDOW_BOTTOM_MARGIN = 50     # 視窗距離螢幕底部的距離 (像素)
 WINDOW_OPACITY = 0.85         # 視窗透明度 (0.0 ~ 1.0，1.0 為不透明)
 
 # ===========================================
 # 🔤 文字設定（可自行調整）
 # ===========================================
-FONT_SIZE = 48                # 字體大小 (像素)
+FONT_SIZE = 36                # 字體大小 (像素)
 FONT_NAME = None              # 字體名稱，None 為系統預設粗體
+MAX_LINES = 3                 # 顯示行數（最新的文字在最下面）
+LINE_HEIGHT = 1.3             # 行高倍率
 
 # ===========================================
 # 🎨 顏色設定（可自行調整）
@@ -140,10 +142,12 @@ class SubtitleWindow:
         screen = NSScreen.mainScreen()
         screen_frame = screen.frame()
         screen_width = screen_frame.size.width
-        screen_height = screen_frame.size.height
         
         window_width = screen_width * WINDOW_WIDTH_RATIO
-        window_height = WINDOW_HEIGHT
+        # 根據行數計算視窗高度
+        line_pixel_height = FONT_SIZE * LINE_HEIGHT
+        window_height = int(line_pixel_height * MAX_LINES + 30)  # 加上 padding
+        
         x = (screen_width - window_width) / 2
         y = WINDOW_BOTTOM_MARGIN
         
@@ -192,11 +196,27 @@ class SubtitleWindow:
         self.label.setSelectable_(False)
         self.label.setAlignment_(NSTextAlignmentCenter)
         
+        # 設定多行顯示
+        self.label.setMaximumNumberOfLines_(MAX_LINES)
+        
         content_view.addSubview_(self.label)
         self.window.makeKeyAndOrderFront_(None)
+        
+        # 歷史文字記錄
+        self.text_history = deque(maxlen=MAX_LINES)
+    
+    def add_text(self, text):
+        """新增一行文字，並更新顯示"""
+        self.text_history.append(text)
+        combined_text = "\n".join(self.text_history)
+        self._update_label(combined_text)
     
     def update_text(self, text):
-        """更新字幕文字（執行緒安全）"""
+        """更新字幕文字（執行緒安全），用於狀態訊息"""
+        self._update_label(text)
+    
+    def _update_label(self, text):
+        """內部方法：更新 label 文字"""
         def update():
             self.label.setStringValue_(text)
         AppHelper.callAfter(update)
@@ -271,7 +291,8 @@ def audio_thread(subtitle_window):
                 subtitle_window.update_text(f"⏳ {task_text}中...")
                 text = transcribe_audio(audio_data)
                 if text and running:
-                    subtitle_window.update_text(text)
+                    # 使用 add_text 新增一行
+                    subtitle_window.add_text(text)
     
     except Exception as e:
         if running:
@@ -419,13 +440,14 @@ def main():
     print("=" * 50)
     print(f"\n視窗設定：")
     print(f"  寬度：螢幕的 {int(WINDOW_WIDTH_RATIO * 100)}%")
-    print(f"  高度：{WINDOW_HEIGHT} 像素")
+    print(f"  顯示行數：{MAX_LINES} 行")
     print(f"  字體：{FONT_SIZE} 像素")
     print(f"  顏色：{TEXT_COLOR}")
     print("\n操作說明：")
     print("  • 拖動字幕視窗可移動位置")
     print("  • 按 Ctrl+C 關閉程式")
     print("  • 字幕會顯示在全螢幕簡報上方")
+    print("  • 最新的字幕會在最下方")
     print("\n正在啟動...\n")
     
     # 設定信號處理
