@@ -7,6 +7,7 @@
 - ✅ 即時語音轉文字（Transcribe）
 - ✅ 即時語音翻譯成英文（Translate）
 - ✅ Apple Silicon GPU 加速
+- ✅ **自動轉換成臺灣繁體中文**（使用 mlx-community 模型時）
 - ✅ 支援 HuggingFace 上的任何 Whisper 模型
 - ✅ **浮動字幕視窗** - 適用於全螢幕簡報
 
@@ -63,7 +64,7 @@ brew install ffmpeg portaudio
 git clone https://github.com/hungshinlee/whisper-live-client-for-mac.git
 cd whisper-live-client-for-mac
 uv venv
-uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa pysilero-vad
+uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa pysilero-vad opencc-python-reimplemented
 ```
 
 ### 3. 開始使用
@@ -127,6 +128,19 @@ uv run python realtime.py --speech-threshold 0.6
 # 組合多個參數
 uv run python realtime.py --silence-duration 0.6 --min-speech-duration 0.2
 ```
+
+---
+
+## 🔄 自動簡繁轉換
+
+使用 `mlx-community/whisper*` 模型時，辨識結果會自動轉換成**臺灣繁體中文**：
+
+- 簡體字 → 繁體字（如「开放」→「開放」）
+- 大陸用語 → 臺灣用語（如「鼠標」→「滑鼠」、「內存」→「記憶體」）
+
+此功能使用 [OpenCC](https://github.com/BYVoid/OpenCC) 的 `s2twp` 配置。
+
+**注意：** 使用本地轉換的模型（如臺灣客語模型）時，不會進行簡繁轉換，以保留原始輸出。
 
 ---
 

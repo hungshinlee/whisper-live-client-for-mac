@@ -27,6 +27,7 @@ import numpy as np
 import pyaudio
 import mlx_whisper
 from pathlib import Path
+from opencc import OpenCC
 
 # 加入父目錄到 path 以便 import vad
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -78,12 +79,30 @@ CHUNK = 512  # Silero VAD 需要特定大小
 DEFAULT_HF_MODEL = "mlx-community/whisper-large-v3-mlx"
 MODELS_DIR = Path(__file__).parent.parent / "models"
 
+# ===========================================
+# 簡繁轉換（臺灣繁體）
+# ===========================================
+# s2twp: 簡體中文 -> 繁體中文（台灣），包含常用詞轉換（如「鼠標」→「滑鼠」）
+cc = OpenCC('s2twp')
+
 # 全域變數
 running = True
 model = None
 task = "transcribe"
 language = None
 vad_config = None
+convert_tw = False
+
+
+def should_convert_to_tw(model_path: str) -> bool:
+    """判斷是否需要轉換成臺灣繁體"""
+    # mlx-community/whisper* 模型輸出可能是簡體中文，需要轉換
+    return model_path.startswith("mlx-community/whisper")
+
+
+def convert_to_tw(text: str) -> str:
+    """將文字轉換成臺灣繁體中文"""
+    return cc.convert(text)
 
 
 def list_local_models() -> list[str]:
@@ -229,7 +248,7 @@ class SubtitleWindow:
 
 
 def transcribe_audio(audio_data: bytes) -> str:
-    global model, task, language
+    global model, task, language, convert_tw
     
     audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
     
@@ -242,8 +261,13 @@ def transcribe_audio(audio_data: bytes) -> str:
         kwargs["language"] = language
     
     result = mlx_whisper.transcribe(audio_np, **kwargs)
+    text = result["text"].strip()
     
-    return result["text"].strip()
+    # 轉換成臺灣繁體
+    if convert_tw and text:
+        text = convert_to_tw(text)
+    
+    return text
 
 
 def audio_thread(subtitle_window):
@@ -313,7 +337,7 @@ def signal_handler(signum, frame):
 
 
 def main():
-    global running, model, task, language, vad_config
+    global running, model, task, language, vad_config, convert_tw
     
     parser = argparse.ArgumentParser(
         description="即時字幕浮動視窗（Apple Silicon GPU 加速）",
@@ -406,6 +430,9 @@ def main():
     task = args.task
     language = args.language
     
+    # 判斷是否需要轉換成臺灣繁體
+    convert_tw = should_convert_to_tw(model)
+    
     # 建立 VAD 設定
     vad_config = VADConfig(
         speech_threshold=args.speech_threshold,
@@ -431,6 +458,8 @@ def main():
     print(f"模型: {model_display}")
     print(f"任務: {task_display}")
     print(f"語言: {lang_display}")
+    if convert_tw:
+        print(f"簡繁轉換: ✓ 臺灣繁體")
     print("-" * 50)
     print("VAD 設定:")
     print(f"  語音門檻: {args.speech_threshold}")

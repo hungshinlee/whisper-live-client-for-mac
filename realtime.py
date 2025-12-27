@@ -26,6 +26,7 @@ import numpy as np
 import pyaudio
 import mlx_whisper
 from pathlib import Path
+from opencc import OpenCC
 
 from vad import SileroVAD, VADConfig
 
@@ -42,6 +43,23 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
 CHUNK = 512  # Silero VAD 需要特定大小，512 是 16kHz 下的標準值
+
+# ===========================================
+# 簡繁轉換（臺灣繁體）
+# ===========================================
+# s2twp: 簡體中文 -> 繁體中文（台灣），包含常用詞轉換（如「鼠標」→「滑鼠」）
+cc = OpenCC('s2twp')
+
+
+def should_convert_to_tw(model: str) -> bool:
+    """判斷是否需要轉換成臺灣繁體"""
+    # mlx-community/whisper* 模型輸出可能是簡體中文，需要轉換
+    return model.startswith("mlx-community/whisper")
+
+
+def convert_to_tw(text: str) -> str:
+    """將文字轉換成臺灣繁體中文"""
+    return cc.convert(text)
 
 
 def list_local_models() -> list[str]:
@@ -92,7 +110,7 @@ def resolve_model(model_name: str | None) -> str:
     return f"mlx-community/{model_name}"
 
 
-def transcribe_audio(audio_data: bytes, model: str, language: str | None, task: str) -> str:
+def transcribe_audio(audio_data: bytes, model: str, language: str | None, task: str, convert_tw: bool) -> str:
     """使用 MLX Whisper 辨識"""
     audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
     
@@ -105,8 +123,13 @@ def transcribe_audio(audio_data: bytes, model: str, language: str | None, task: 
         kwargs["language"] = language
     
     result = mlx_whisper.transcribe(audio_np, **kwargs)
+    text = result["text"].strip()
     
-    return result["text"].strip()
+    # 轉換成臺灣繁體
+    if convert_tw and text:
+        text = convert_to_tw(text)
+    
+    return text
 
 
 def main():
@@ -211,6 +234,9 @@ def main():
     # 解析模型
     model = resolve_model(args.model)
     
+    # 判斷是否需要轉換成臺灣繁體
+    convert_tw = should_convert_to_tw(model)
+    
     # 顯示設定
     task_display = "轉錄" if args.task == "transcribe" else "翻譯成英文"
     lang_display = args.language if args.language else "自動偵測"
@@ -230,6 +256,8 @@ def main():
     print(f"模型: {model_display} ({model_source})")
     print(f"任務: {task_display}")
     print(f"語言: {lang_display}")
+    if convert_tw:
+        print(f"簡繁轉換: ✓ 臺灣繁體")
     print("-" * 50)
     print("VAD 設定:")
     print(f"  語音門檻: {args.speech_threshold}")
@@ -283,7 +311,7 @@ def main():
             
             if audio_data is not None and len(audio_data) > CHUNK * 10:
                 print("⏳ 辨識中...   ", end="\r")
-                text = transcribe_audio(audio_data, model, args.language, args.task)
+                text = transcribe_audio(audio_data, model, args.language, args.task, convert_tw)
                 if text:
                     print(f"📝 {text}")
     

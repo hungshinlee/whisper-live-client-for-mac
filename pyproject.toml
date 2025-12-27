@@ -9,4 +9,5 @@ dependencies = [
     "numpy",
     "pyobjc-framework-Cocoa",
     "pysilero-vad",
+    "opencc-python-reimplemented",
 ]
