@@ -113,12 +113,18 @@ cd ..
 ./install_fonts.sh
 ```
 
+可選擇安裝：
+- **花園明朝 (HanaMin)** - 支援最多漢字
+- **思源黑體 (Noto Sans CJK TC)** - 較美觀
+
 ### 設定字幕視窗字體
 
 編輯 `subtitle.py`，修改 `FONT_NAME`：
 
 ```python
-FONT_NAME = "HanaMinA"
+FONT_NAME = "HanaMinA"           # 花園明朝
+# 或
+FONT_NAME = "Noto Sans CJK TC"   # 思源黑體
 ```
 
 ---
@@ -146,4 +152,4 @@ uv run python subtitle.py --model mlx-community/whisper-medium-mlx
 
 ### 顯示方塊字（豆腐字）
 
-安裝擴展漢字字體並設定 `FONT_NAME = "HanaMinA"`，詳見上方說明。
+安裝擴展漢字字體並設定 `FONT_NAME`，詳見上方說明。

@@ -137,7 +137,12 @@ uv run python subtitle.py --model mlx-community/whisper-medium-mlx
 ./install_fonts.sh
 ```
 
-此腳本會安裝[花園明朝](https://github.com/cjkvi/HanaMinAFDKO)字體，支援最廣泛的 Unicode 漢字。
+此腳本提供兩種字體選擇：
+
+| 字體 | 特色 |
+|------|------|
+| 花園明朝 (HanaMin) | 支援最多漢字，適合臺灣客語 |
+| 思源黑體 (Noto Sans CJK TC) | Google/Adobe 字體，較美觀 |
 
 ### 設定終端機字體
 
@@ -145,19 +150,18 @@ uv run python subtitle.py --model mlx-community/whisper-medium-mlx
 
 **iTerm2：**
 1. **Preferences** → **Profiles** → **Text**
-2. **Font** 選擇 `HanaMinA`
-3. 或勾選 **Use a different font for non-ASCII text**，選擇 `HanaMinA`
+2. **Font** 選擇 `HanaMinA` 或 `Noto Sans CJK TC`
 
 **Terminal.app：**
 1. **偏好設定** → **描述檔** → **字體** → **更改**
-2. 選擇 `HanaMinA`
+2. 選擇 `HanaMinA` 或 `Noto Sans CJK TC`
 
 ### 設定字幕視窗字體
 
 編輯 `subtitle/subtitle.py`，修改 `FONT_NAME`：
 
 ```python
-FONT_NAME = "HanaMinA"
+FONT_NAME = "HanaMinA"  # 或 "Noto Sans CJK TC"
 ```
 
 ---
@@ -245,7 +249,7 @@ uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
 ./install_fonts.sh
 ```
 
-安裝後設定終端機或字幕視窗使用 `HanaMinA` 字體。
+安裝後設定終端機或字幕視窗使用 `HanaMinA` 或 `Noto Sans CJK TC` 字體。
 
 ### brew 指令找不到
 
