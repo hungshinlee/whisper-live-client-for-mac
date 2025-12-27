@@ -353,7 +353,3 @@ MIT License
 **李鴻欣 (Hung-Shin Lee)**  
 聯和科創（United Link Co., Ltd.）  
 hungshinlee@gmail.com
-
-**陳力瑋 (Li-Wei Chen)**  
-國立清華大學（NTHU）  
-wayne900619@gmail.com
