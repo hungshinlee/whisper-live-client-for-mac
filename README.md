@@ -104,8 +104,8 @@ uv run python realtime.py --list
 | 參數 | 說明 | 預設值 |
 |------|------|--------|
 | `--speech-threshold` | 語音偵測門檻（0.0~1.0），越高越嚴格 | `0.5` |
-| `--silence-duration` | 語音結束後的靜音時長（秒） | `1.0` |
-| `--min-speech-duration` | 最短語音長度（秒），太短會被忽略 | `0.3` |
+| `--silence-duration` | 語音結束後的靜音時長（秒） | `0.6` |
+| `--min-speech-duration` | 最短語音長度（秒），太短會被忽略 | `0.2` |
 | `--speech-pad-duration` | 語音前後的緩衝（秒） | `0.1` |
 
 ### VAD 參數調整建議

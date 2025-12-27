@@ -197,14 +197,14 @@ def main():
     parser.add_argument(
         "--silence-duration",
         type=float,
-        default=1.0,
-        help="語音結束後的靜音時長（秒），預設 1.0",
+        default=0.6,
+        help="語音結束後的靜音時長（秒），預設 0.6",
     )
     parser.add_argument(
         "--min-speech-duration",
         type=float,
-        default=0.3,
-        help="最短語音長度（秒），太短會被忽略，預設 0.3",
+        default=0.2,
+        help="最短語音長度（秒），太短會被忽略，預設 0.2",
     )
     parser.add_argument(
         "--speech-pad-duration",
