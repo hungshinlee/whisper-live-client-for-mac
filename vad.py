@@ -6,19 +6,14 @@ Silero VAD 語音活動偵測模組
 """
 from collections import deque
 from dataclasses import dataclass
-import numpy as np
 
-try:
-    from pysilero_vad import SileroVoiceActivityDetector
-    HAS_SILERO = True
-except ImportError:
-    HAS_SILERO = False
+from pysilero_vad import SileroVoiceActivityDetector
 
 
 @dataclass
 class VADConfig:
     """VAD 設定"""
-    # 語音機率門檻（0.0~1.0）
+    # 語音機率門檻（0.0~1.0），越高越嚴格
     speech_threshold: float = 0.5
     
     # 語音結束後，需要多長的靜音才算真正結束（秒）
@@ -52,12 +47,6 @@ class SileroVAD:
     """
     
     def __init__(self, config: VADConfig | None = None):
-        if not HAS_SILERO:
-            raise ImportError(
-                "pysilero-vad 未安裝。請執行：\n"
-                "  uv pip install pysilero-vad"
-            )
-        
         self.config = config or VADConfig()
         self.vad = SileroVoiceActivityDetector()
         
@@ -171,88 +160,3 @@ class SileroVAD:
         
         self.reset()
         return None
-
-
-class SimpleVAD:
-    """
-    簡單的音量門檻 VAD（作為備用）
-    """
-    
-    def __init__(
-        self,
-        silence_threshold: int = 500,
-        silence_duration: float = 1.5,
-        sample_rate: int = 16000,
-        chunk_size: int = 1024,
-    ):
-        self.silence_threshold = silence_threshold
-        self.sample_rate = sample_rate
-        self.chunk_size = chunk_size
-        
-        self.chunks_for_silence = int(
-            silence_duration * sample_rate / chunk_size
-        )
-        
-        self.reset()
-    
-    def reset(self):
-        self.is_speaking = False
-        self.silence_chunks = 0
-        self.audio_buffer = []
-    
-    def process(self, audio_bytes: bytes) -> bytes | None:
-        """處理音訊 chunk"""
-        level = self._get_audio_level(audio_bytes)
-        
-        if level > self.silence_threshold:
-            self.is_speaking = True
-            self.silence_chunks = 0
-            self.audio_buffer.append(audio_bytes)
-        elif self.is_speaking:
-            self.audio_buffer.append(audio_bytes)
-            self.silence_chunks += 1
-            
-            if self.silence_chunks > self.chunks_for_silence:
-                self.is_speaking = False
-                result = b''.join(self.audio_buffer)
-                self.reset()
-                return result
-        
-        return None
-    
-    def finalize(self) -> bytes | None:
-        if self.is_speaking and len(self.audio_buffer) > 0:
-            result = b''.join(self.audio_buffer)
-            self.reset()
-            return result
-        return None
-    
-    @staticmethod
-    def _get_audio_level(data: bytes) -> float:
-        samples = np.frombuffer(data, dtype=np.int16)
-        return np.abs(samples).mean()
-
-
-def create_vad(use_silero: bool = True, **kwargs) -> SileroVAD | SimpleVAD:
-    """
-    建立 VAD 實例
-    
-    Args:
-        use_silero: 是否使用 Silero VAD（如果可用）
-        **kwargs: 傳遞給 VAD 的參數
-        
-    Returns:
-        VAD 實例
-    """
-    if use_silero and HAS_SILERO:
-        config = VADConfig(**{
-            k: v for k, v in kwargs.items() 
-            if k in VADConfig.__dataclass_fields__
-        })
-        return SileroVAD(config)
-    else:
-        simple_kwargs = {
-            k: v for k, v in kwargs.items()
-            if k in ['silence_threshold', 'silence_duration', 'sample_rate', 'chunk_size']
-        }
-        return SimpleVAD(**simple_kwargs)

@@ -27,7 +27,7 @@ import pyaudio
 import mlx_whisper
 from pathlib import Path
 
-from vad import create_vad, VADConfig, HAS_SILERO
+from vad import SileroVAD, VADConfig
 
 # ===========================================
 # 預設設定
@@ -127,8 +127,8 @@ def main():
   # 使用較小的模型（適合 M1/M2）
   uv run python realtime.py --model mlx-community/whisper-medium-mlx
   
-  # 使用本地轉換的模型
-  uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
+  # 調整 VAD 參數（說話較快時）
+  uv run python realtime.py --silence-duration 0.6 --min-speech-duration 0.2
 
 常用模型:
   mlx-community/whisper-large-v3-mlx    ~3GB   翻譯✓  M3/M4 推薦
@@ -161,16 +161,30 @@ def main():
         action="store_true",
         help="列出可用的本地模型",
     )
+    # VAD 參數
     parser.add_argument(
-        "--no-vad",
-        action="store_true",
-        help="不使用 Silero VAD（改用簡單音量門檻）",
+        "--speech-threshold",
+        type=float,
+        default=0.5,
+        help="語音偵測門檻（0.0~1.0），越高越嚴格，預設 0.5",
     )
     parser.add_argument(
         "--silence-duration",
         type=float,
         default=1.0,
         help="語音結束後的靜音時長（秒），預設 1.0",
+    )
+    parser.add_argument(
+        "--min-speech-duration",
+        type=float,
+        default=0.3,
+        help="最短語音長度（秒），太短會被忽略，預設 0.3",
+    )
+    parser.add_argument(
+        "--speech-pad-duration",
+        type=float,
+        default=0.1,
+        help="語音前後的緩衝（秒），預設 0.1",
     )
     
     args = parser.parse_args()
@@ -209,10 +223,6 @@ def main():
         model_display = Path(model).name  # 本地模型
         model_source = "本地"
     
-    # 決定使用哪種 VAD
-    use_silero = not args.no_vad and HAS_SILERO
-    vad_display = "Silero VAD" if use_silero else "音量門檻"
-    
     print("=" * 50)
     print("MLX Whisper 即時語音辨識")
     print("使用 Apple Silicon GPU 加速")
@@ -220,20 +230,26 @@ def main():
     print(f"模型: {model_display} ({model_source})")
     print(f"任務: {task_display}")
     print(f"語言: {lang_display}")
-    print(f"VAD: {vad_display}")
+    print("-" * 50)
+    print("VAD 設定:")
+    print(f"  語音門檻: {args.speech_threshold}")
+    print(f"  靜音時長: {args.silence_duration} 秒")
+    print(f"  最短語音: {args.min_speech_duration} 秒")
+    print(f"  前後緩衝: {args.speech_pad_duration} 秒")
     print("=" * 50)
     print("\n說話後，文字會即時顯示")
     print("按 Ctrl+C 停止\n")
     print("-" * 50)
     
     # 建立 VAD
-    vad = create_vad(
-        use_silero=use_silero,
+    vad_config = VADConfig(
+        speech_threshold=args.speech_threshold,
         min_silence_duration=args.silence_duration,
-        silence_duration=args.silence_duration,  # for SimpleVAD
+        min_speech_duration=args.min_speech_duration,
+        speech_pad_duration=args.speech_pad_duration,
         sample_rate=RATE,
-        chunk_size=CHUNK,
     )
+    vad = SileroVAD(vad_config)
     
     # 初始化 PyAudio
     audio = pyaudio.PyAudio()

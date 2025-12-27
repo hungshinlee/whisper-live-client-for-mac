@@ -86,16 +86,48 @@ uv run python realtime.py --model mlx-community/whisper-medium-mlx
 uv run python realtime.py --list
 ```
 
-### 參數說明
+---
+
+## 參數說明
+
+### 基本參數
 
 | 參數 | 簡寫 | 說明 | 預設值 |
 |------|------|------|--------|
 | `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `whisper-large-v3-mlx` |
 | `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
-| `--silence-duration` | | 語音結束後的靜音時長（秒）| `1.0` |
-| `--no-vad` | | 不使用 Silero VAD | |
 | `--list` | | 列出可用模型 | |
+
+### VAD 參數（語音偵測）
+
+| 參數 | 說明 | 預設值 |
+|------|------|--------|
+| `--speech-threshold` | 語音偵測門檻（0.0~1.0），越高越嚴格 | `0.5` |
+| `--silence-duration` | 語音結束後的靜音時長（秒） | `1.0` |
+| `--min-speech-duration` | 最短語音長度（秒），太短會被忽略 | `0.3` |
+| `--speech-pad-duration` | 語音前後的緩衝（秒） | `0.1` |
+
+### VAD 參數調整建議
+
+| 情境 | 建議調整 |
+|------|----------|
+| 說話較快 | `--silence-duration 0.6` |
+| 環境吵雜 | `--speech-threshold 0.6` |
+| 短句被忽略 | `--min-speech-duration 0.1` |
+| 開頭被截斷 | `--speech-pad-duration 0.2` |
+
+範例：
+```bash
+# 說話較快，縮短靜音判斷時間
+uv run python realtime.py --silence-duration 0.6
+
+# 環境吵雜，提高語音門檻
+uv run python realtime.py --speech-threshold 0.6
+
+# 組合多個參數
+uv run python realtime.py --silence-duration 0.6 --min-speech-duration 0.2
+```
 
 ---
 
@@ -108,9 +140,7 @@ uv run python realtime.py --list
 | 區分人聲/噪音 | ✅ 能準確區分 | ❌ 無法區分 |
 | 背景噪音 | ✅ 自動過濾鍵盤聲、空調聲等 | ❌ 需手動調整門檻 |
 | 說話中短暫停頓 | ✅ 能正確處理 | ❌ 可能誤判為結束 |
-| 使用體驗 | ✅ 免調參數 | ❌ 需根據環境調整 |
-
-如果遇到問題，可以使用 `--no-vad` 切換回傳統方式。
+| 使用體驗 | ✅ 預設參數即可使用 | ❌ 需根據環境調整 |
 
 ---
 
@@ -127,6 +157,9 @@ uv run python subtitle/subtitle.py --task translate
 
 # 使用較小的模型
 uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
+
+# 調整 VAD 參數
+uv run python subtitle/subtitle.py --silence-duration 0.6
 ```
 
 ### 特色
@@ -255,7 +288,14 @@ uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
 
 ### VAD 偵測不準確
 
-嘗試調整 `--silence-duration` 參數，或使用 `--no-vad` 切換回傳統音量門檻方式。
+調整 VAD 參數：
+```bash
+# 環境吵雜時提高門檻
+uv run python realtime.py --speech-threshold 0.6
+
+# 說話較快時縮短靜音時長
+uv run python realtime.py --silence-duration 0.6
+```
 
 ### 顯示方塊字（豆腐字）
 

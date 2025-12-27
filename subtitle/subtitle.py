@@ -29,7 +29,7 @@ from pathlib import Path
 
 # 加入父目錄到 path 以便 import vad
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from vad import create_vad, VADConfig, HAS_SILERO
+from vad import SileroVAD, VADConfig
 
 import AppKit
 from AppKit import (
@@ -81,8 +81,7 @@ running = True
 model = None
 task = "transcribe"
 language = None
-use_silero_vad = True
-silence_duration = 1.0
+vad_config = None
 
 
 def list_local_models() -> list[str]:
@@ -229,7 +228,7 @@ def transcribe_audio(audio_data: bytes) -> str:
 
 def audio_thread(subtitle_window):
     """錄音和辨識的執行緒"""
-    global running, model, task, language, use_silero_vad, silence_duration
+    global running, model, task, language, vad_config
     
     audio = pyaudio.PyAudio()
     stream = audio.open(
@@ -250,14 +249,7 @@ def audio_thread(subtitle_window):
     mlx_whisper.transcribe(dummy, **warmup_kwargs)
     
     # 建立 VAD
-    use_silero = use_silero_vad and HAS_SILERO
-    vad = create_vad(
-        use_silero=use_silero,
-        min_silence_duration=silence_duration,
-        silence_duration=silence_duration,
-        sample_rate=RATE,
-        chunk_size=CHUNK,
-    )
+    vad = SileroVAD(vad_config)
     
     subtitle_window.update_text("🎤 準備就緒，開始說話...")
     
@@ -300,7 +292,7 @@ def signal_handler(signum, frame):
 
 
 def main():
-    global running, model, task, language, use_silero_vad, silence_duration
+    global running, model, task, language, vad_config
     
     parser = argparse.ArgumentParser(
         description="即時字幕浮動視窗（Apple Silicon GPU 加速）",
@@ -316,8 +308,8 @@ def main():
   # 使用較小的模型
   uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
   
-  # 指定語言
-  uv run python subtitle/subtitle.py --language zh
+  # 調整 VAD 參數
+  uv run python subtitle/subtitle.py --silence-duration 0.6
 """
     )
     parser.add_argument(
@@ -344,16 +336,30 @@ def main():
         action="store_true",
         help="列出可用的模型",
     )
+    # VAD 參數
     parser.add_argument(
-        "--no-vad",
-        action="store_true",
-        help="不使用 Silero VAD（改用簡單音量門檻）",
+        "--speech-threshold",
+        type=float,
+        default=0.5,
+        help="語音偵測門檻（0.0~1.0），越高越嚴格，預設 0.5",
     )
     parser.add_argument(
         "--silence-duration",
         type=float,
         default=1.0,
         help="語音結束後的靜音時長（秒），預設 1.0",
+    )
+    parser.add_argument(
+        "--min-speech-duration",
+        type=float,
+        default=0.3,
+        help="最短語音長度（秒），太短會被忽略，預設 0.3",
+    )
+    parser.add_argument(
+        "--speech-pad-duration",
+        type=float,
+        default=0.1,
+        help="語音前後的緩衝（秒），預設 0.1",
     )
     
     args = parser.parse_args()
@@ -378,8 +384,15 @@ def main():
     model = resolve_model(args.model)
     task = args.task
     language = args.language
-    use_silero_vad = not args.no_vad
-    silence_duration = args.silence_duration
+    
+    # 建立 VAD 設定
+    vad_config = VADConfig(
+        speech_threshold=args.speech_threshold,
+        min_silence_duration=args.silence_duration,
+        min_speech_duration=args.min_speech_duration,
+        speech_pad_duration=args.speech_pad_duration,
+        sample_rate=RATE,
+    )
     
     # 顯示設定
     task_display = "轉錄" if task == "transcribe" else "翻譯成英文"
@@ -390,10 +403,6 @@ def main():
     else:
         model_display = Path(model).name
     
-    # 決定使用哪種 VAD
-    use_silero = use_silero_vad and HAS_SILERO
-    vad_display = "Silero VAD" if use_silero else "音量門檻"
-    
     print("=" * 50)
     print("即時字幕浮動視窗")
     print("使用 Apple Silicon GPU 加速")
@@ -401,7 +410,12 @@ def main():
     print(f"模型: {model_display}")
     print(f"任務: {task_display}")
     print(f"語言: {lang_display}")
-    print(f"VAD: {vad_display}")
+    print("-" * 50)
+    print("VAD 設定:")
+    print(f"  語音門檻: {args.speech_threshold}")
+    print(f"  靜音時長: {args.silence_duration} 秒")
+    print(f"  最短語音: {args.min_speech_duration} 秒")
+    print(f"  前後緩衝: {args.speech_pad_duration} 秒")
     print("=" * 50)
     print(f"\n視窗設定：")
     print(f"  寬度：螢幕的 {int(WINDOW_WIDTH_RATIO * 100)}%")

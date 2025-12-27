@@ -35,14 +35,36 @@ uv run python subtitle/subtitle.py --list
 
 ## 參數說明
 
+### 基本參數
+
 | 參數 | 簡寫 | 說明 | 預設值 |
 |------|------|------|--------|
 | `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `whisper-large-v3-mlx` |
 | `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
-| `--silence-duration` | | 語音結束後的靜音時長（秒）| `1.0` |
-| `--no-vad` | | 不使用 Silero VAD | |
 | `--list` | | 列出可用模型 | |
+
+### VAD 參數（語音偵測）
+
+| 參數 | 說明 | 預設值 |
+|------|------|--------|
+| `--speech-threshold` | 語音偵測門檻（0.0~1.0），越高越嚴格 | `0.5` |
+| `--silence-duration` | 語音結束後的靜音時長（秒） | `1.0` |
+| `--min-speech-duration` | 最短語音長度（秒），太短會被忽略 | `0.3` |
+| `--speech-pad-duration` | 語音前後的緩衝（秒） | `0.1` |
+
+### VAD 參數調整範例
+
+```bash
+# 說話較快，縮短靜音判斷時間
+uv run python subtitle/subtitle.py --silence-duration 0.6
+
+# 環境吵雜，提高語音門檻
+uv run python subtitle/subtitle.py --speech-threshold 0.6
+
+# 組合多個參數
+uv run python subtitle/subtitle.py --silence-duration 0.6 --min-speech-duration 0.2
+```
 
 ## 操作說明
 
@@ -120,16 +142,16 @@ FONT_NAME = "Noto Sans CJK TC"   # 思源黑體
 
 ### 字幕更新太慢
 
-降低 `--silence-duration`，例如：
+縮短 `--silence-duration`：
 ```bash
-uv run python subtitle/subtitle.py --silence-duration 0.8
+uv run python subtitle/subtitle.py --silence-duration 0.6
 ```
 
-### VAD 偵測不準確
+### 環境吵雜誤觸發
 
-使用 `--no-vad` 切換回傳統音量門檻方式：
+提高 `--speech-threshold`：
 ```bash
-uv run python subtitle/subtitle.py --no-vad
+uv run python subtitle/subtitle.py --speech-threshold 0.6
 ```
 
 ### 模型太慢
