@@ -1,65 +1,78 @@
-# WhisperLive 客戶端
+# Whisper Live Client for Mac
 
-即時語音轉文字與翻譯工具，使用 OpenAI Whisper 模型。支援 Apple Silicon GPU 加速。
+專為 Apple Silicon Mac 設計的即時語音轉文字工具，使用 MLX 框架實現 GPU 加速。
 
 ## 功能特色
 
 - ✅ 即時語音轉文字（Transcribe）
 - ✅ 即時語音翻譯成英文（Translate）
-- ✅ Apple Silicon GPU 加速（MLX 版本）
-- ✅ **自訂模型轉換** - 支援 HuggingFace 上的任何 Whisper 模型
-- ✅ **浮動字幕視窗** - 適用於全螢幕簡報時顯示即時字幕
+- ✅ Apple Silicon GPU 加速
+- ✅ 支援 HuggingFace 上的任何 Whisper 模型
+- ✅ **浮動字幕視窗** - 適用於全螢幕簡報
 
-## 版本比較
+## 系統需求
 
-| 版本 | 目錄 | 運算 | 特性 |
-|------|------|------|------|
-| WhisperLive | `/` (根目錄) | CPU | 即時串流，邊說邊顯示 |
-| MLX Whisper | `/mlx` | Apple GPU | 更快速度，說完才辨識，支援自訂模型 |
-| 浮動字幕 | `/mlx/subtitle` | Apple GPU | 全螢幕簡報時顯示字幕 |
-
-**建議：** 如果你有 Apple Silicon Mac，推薦使用 `mlx/` 目錄的 MLX 版本，速度更快且支援自訂模型。
+- macOS（Apple Silicon：M1/M2/M3/M4）
+- Python 3.10+
+- Homebrew
 
 ---
 
-## MLX Whisper 版本（Apple GPU）⚡ 推薦
+## 快速開始
 
-使用 Apple Silicon GPU 加速，支援轉換和使用 HuggingFace 上的任何 Whisper 模型。
-
-### 快速開始
+### 1. 安裝系統依賴
 
 ```bash
-# 安裝系統依賴
 brew install ffmpeg portaudio
+```
 
-# 設置環境
-cd whisper-live-client/mlx
+### 2. 設置環境
+
+```bash
+git clone https://github.com/hungshinlee/whisper-live-client-for-mac.git
+cd whisper-live-client-for-mac
 uv venv
 uv pip install mlx-whisper pyaudio numpy
 ```
 
-### 即時語音辨識
-
-可以直接使用 HuggingFace 上的 MLX 模型（會自動下載），或使用自行轉換的模型。
-
-#### 使用 HuggingFace 模型（自動下載）
+### 3. 開始使用
 
 ```bash
-# 純轉錄（使用預設的 whisper-large-v3）
+# 純轉錄（使用 whisper-large-v3，會自動下載）
 uv run python transcribe_only.py
 
 # 翻譯成英文
 uv run python transcribe.py
 ```
 
-#### 使用本地轉換的模型
+---
+
+## 🎤 即時語音辨識
+
+### 使用 HuggingFace 模型（自動下載）
+
+最簡單的方式，不需要轉換模型：
 
 ```bash
-# 基本使用（自動偵測語言）
-uv run python realtime.py
+# 純轉錄
+uv run python transcribe_only.py
 
-# 列出可用模型
-uv run python realtime.py --list
+# 翻譯成英文
+uv run python transcribe.py
+```
+
+### 使用本地轉換的模型
+
+如果你需要使用特定的微調模型（如臺灣客語），可以先轉換再使用：
+
+```bash
+# 轉換模型
+cd convert
+./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
+
+# 使用轉換後的模型
+cd ..
+uv run python realtime.py
 
 # 指定模型
 uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
@@ -71,167 +84,100 @@ uv run python realtime.py --task translate
 uv run python realtime.py --language zh
 ```
 
-### 模型選擇建議
-
-⚠️ **效能提示：** 如果你的 Mac 晶片不是 M4，建議使用 `medium` 或更小的模型，以獲得更流暢的體驗。
-
-| 晶片 | 建議模型 |
-|------|----------|
-| M4 / M4 Pro / M4 Max | `large-v3`（最佳品質）|
-| M3 / M3 Pro / M3 Max | `large-v3` 或 `medium` |
-| M2 / M2 Pro / M2 Max | `medium` 或 `small` |
-| M1 / M1 Pro / M1 Max | `small` 或 `base` |
-
-### 轉換自訂模型（可選）
-
-如果需要使用特定語言的微調模型（如臺灣客語），可以將 HuggingFace 上的 Whisper 模型轉換為 MLX 格式：
-
-```bash
-cd convert
-
-# 轉換模型（例如臺灣客語模型）
-./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
-
-# 轉換其他模型
-./convert.sh openai/whisper-large-v3
-```
-
-轉換後的模型存放在 `models/` 目錄。
-
 ### 參數說明
 
 | 參數 | 簡寫 | 說明 | 預設值 |
 |------|------|------|--------|
 | `--model` | `-m` | 模型名稱或路徑 | 第一個可用模型 |
-| `--task` | `-t` | `transcribe`（轉錄）或 `translate`（翻譯成英文）| `transcribe` |
+| `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
 | `--list` | | 列出可用模型 | |
 
-👉 詳細說明請看 [mlx/README.md](mlx/README.md)
-
 ---
 
-## 浮動字幕視窗（簡報用）🎤
+## 🖥️ 浮動字幕視窗
 
-適用於 Google Slides、PowerPoint、Keynote 等全螢幕簡報時，即時顯示字幕。
+適用於 Google Slides、PowerPoint、Keynote 等全螢幕簡報時顯示即時字幕。
 
-### 特色
-
-- 字幕視窗始終顯示在最上層（包括全螢幕應用上方）
-- 半透明背景，不會過度遮擋簡報內容
-- 可拖動調整位置
-- 可自訂視窗大小、字體大小、顏色
-- 支援本地轉換的模型
-
-### 快速開始
+### 設置
 
 ```bash
-cd whisper-live-client/mlx/subtitle
+cd subtitle
 uv venv
 uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa
+```
 
+### 使用
+
+```bash
 # 基本使用
 uv run python subtitle.py
 
-# 指定模型和任務
-uv run python subtitle.py -m whisper-large-v2-taiwanese-hakka-v1-mlx -t transcribe
+# 翻譯成英文
+uv run python subtitle.py --task translate
+
+# 指定模型
+uv run python subtitle.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
 ```
 
-### 簡報流程
+### 特色
 
-1. 先轉換模型（如果還沒有的話）
-2. 啟動字幕程式，等待顯示「準備就緒」
-3. 拖動字幕視窗到適合的位置（例如螢幕底部）
-4. 開啟簡報軟體並進入全螢幕模式
-5. 開始說話，字幕會即時顯示
-6. 按 `Ctrl+C` 結束程式
+- 字幕視窗始終在最上層（包括全螢幕應用上方）
+- 可拖動調整位置
+- 可自訂視窗大小、字體、顏色
 
-👉 詳細說明請看 [mlx/subtitle/README.md](mlx/subtitle/README.md)
+詳細說明請看 [subtitle/README.md](subtitle/README.md)
 
 ---
 
-## WhisperLive 版本（CPU）
+## 模型選擇建議
 
-使用 CPU 運算，特色是「邊說邊顯示」的即時串流效果。
+⚠️ **效能提示：** 如果你的 Mac 不是 M4 晶片，建議使用 `medium` 或更小的模型。
 
-### 設置步驟
+| 晶片 | 建議模型 | 說明 |
+|------|----------|------|
+| M4 / M4 Pro / M4 Max | `large-v3` | 最佳品質 |
+| M3 / M3 Pro / M3 Max | `large-v3` 或 `medium` | large 可能稍慢 |
+| M2 / M2 Pro / M2 Max | `medium` 或 `small` | 平衡品質與速度 |
+| M1 / M1 Pro / M1 Max | `small` 或 `base` | 確保流暢體驗 |
 
-```bash
-brew install portaudio
+### 可用模型
 
-cd whisper-live-client
-uv venv
-uv pip install whisper-live pyaudio
-```
+⚠️ **turbo 版本不支援翻譯功能！**
 
-### 使用方式
+| 模型 | 大小 | 翻譯 | 建議晶片 |
+|------|------|------|----------|
+| `mlx-community/whisper-large-v3-mlx` | ~3 GB | ✅ | M3/M4 |
+| `mlx-community/whisper-large-v3-turbo` | ~1.6 GB | ❌ | M2/M3/M4 |
+| `mlx-community/whisper-medium-mlx` | ~1.5 GB | ✅ | 全部 |
+| `mlx-community/whisper-small-mlx` | ~488 MB | ✅ | 全部 |
+| `mlx-community/whisper-base-mlx` | ~145 MB | ✅ | 全部 |
+| `mlx-community/whisper-tiny-mlx` | ~75 MB | ✅ | 全部 |
 
-需要開啟兩個終端視窗。
+如需使用較小的模型，修改 `transcribe.py` 或 `transcribe_only.py` 中的 `MODEL_NAME`：
 
-**啟動伺服器（終端視窗 1）：**
-```bash
-uv run python server.py
-```
-
-**啟動客戶端（終端視窗 2）：**
-```bash
-# 中文翻譯成英文
-uv run python transcribe.py
-
-# 純中文轉錄（不翻譯）
-uv run python transcribe_only.py
+```python
+MODEL_NAME = "mlx-community/whisper-medium-mlx"
 ```
 
 ---
 
-## 功能說明
+## 轉換自訂模型
 
-### Transcribe（轉錄）
+可以將 HuggingFace 上的任何 Whisper 模型轉換為 MLX 格式：
 
-將語音轉成文字，保持原本的語言。
+```bash
+cd convert
+./convert.sh <hf-repo>
 
-### Translate（翻譯）
+# 範例
+./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
+./convert.sh openai/whisper-large-v3
+```
 
-將任何語言的語音翻譯成英文。
+轉換後的模型存放在 `models/` 目錄。
 
-**注意：** Whisper 的 `translate` 功能只能翻譯成英文。
-
----
-
-## 支援的模型
-
-### MLX 社群模型（自動下載）
-
-⚠️ **重要：turbo 版本不支援翻譯功能！**
-
-| 模型 | 大小 | 翻譯支援 | 建議晶片 |
-|------|------|----------|----------|
-| `mlx-community/whisper-large-v3-mlx` | ~3 GB | ✅ 支援 | M3/M4 |
-| `mlx-community/whisper-large-v3-turbo` | ~1.6 GB | ❌ 不支援 | M2/M3/M4 |
-| `mlx-community/whisper-medium-mlx` | ~1.5 GB | ✅ 支援 | M1/M2/M3/M4 |
-| `mlx-community/whisper-small-mlx` | ~488 MB | ✅ 支援 | 全部 |
-| `mlx-community/whisper-base-mlx` | ~145 MB | ✅ 支援 | 全部 |
-| `mlx-community/whisper-tiny-mlx` | ~75 MB | ✅ 支援 | 全部 |
-
-### 本地轉換模型
-
-可以轉換 HuggingFace 上的任何 Whisper 模型：
-
-| 模型 | 說明 |
-|------|------|
-| `formospeech/whisper-large-v2-taiwanese-hakka-v1` | 臺灣客語 |
-| `openai/whisper-large-v3` | OpenAI 官方最新模型 |
-| 其他 Whisper 微調模型 | 都可以轉換使用 |
-
-### WhisperLive 版本模型
-
-| 模型 | 大小 | 速度 | 準確度 |
-|------|------|------|--------|
-| `tiny` | ~75 MB | 最快 | 較低 |
-| `base` | ~145 MB | 快 | 基本 |
-| `small` | ~488 MB | 中等 | 好 |
-| `medium` | ~1.5 GB | 較慢 | 很好 |
-| `large-v3` | ~3 GB | 最慢 | 最好 |
+詳細說明請看 [convert/README.md](convert/README.md)
 
 ---
 
@@ -244,66 +190,43 @@ uv run python transcribe_only.py
 | 日文 | `ja` |
 | 韓文 | `ko` |
 | 臺灣客語 | `zh`（使用專用模型）|
-| 自動偵測 | 不設定語言參數 |
+| 自動偵測 | 不設定 |
 
 ---
 
 ## 疑難排解
 
-### 麥克風測試
+### 麥克風沒有反應
 
-如果說話後沒有顯示結果，先測試麥克風：
+1. **系統設定** → **隱私與安全性** → **麥克風** → 勾選終端機
+2. **系統設定** → **聲音** → **輸入** → 確認選對麥克風
 
-```bash
-uv run python test_mic.py
-```
+### 確認 GPU 使用
 
-若音量條不動：
-1. 檢查 **系統設定** → **隱私與安全性** → **麥克風** → 確認終端機有權限
-2. 檢查 **系統設定** → **聲音** → **輸入** → 確認選對麥克風且音量足夠
+執行時打開「活動監視器」→「GPU」分頁，應該會看到 Python 使用 GPU。
 
-### 確認 MLX 版本有使用 GPU
+### 辨識品質不佳
 
-執行時打開「活動監視器」→「GPU」分頁，應該會看到 Python 正在使用 GPU。
-
-### Port 9090 被佔用（WhisperLive 版本）
-
-```bash
-./kill_server.sh
-# 或
-lsof -ti:9090 | xargs kill -9
-```
+- 說話清晰、語速適中
+- 減少背景噪音
+- 嘗試使用更大的模型
 
 ---
 
 ## 目錄結構
 
 ```
-whisper-live-client/
+whisper-live-client-for-mac/
 ├── README.md
-├── server.py              # WhisperLive 伺服器
-├── transcribe.py          # WhisperLive 客戶端（翻譯）
-├── transcribe_only.py     # WhisperLive 客戶端（轉錄）
-├── test_mic.py            # 麥克風測試
-├── kill_server.sh         # 清理 port 9090
-│
-└── mlx/                   # MLX 版本（Apple GPU）
-    ├── README.md
-    ├── realtime.py        # 🎤 即時語音辨識（本地模型）
-    ├── transcribe.py      # 翻譯（HF 模型自動下載）
-    ├── transcribe_only.py # 轉錄（HF 模型自動下載）
-    │
-    ├── convert/           # 模型轉換工具
-    │   ├── convert.sh     # 轉換腳本
-    │   ├── convert.py     # Python 轉換程式
-    │   └── README.md
-    │
-    ├── models/            # 轉換後的模型
-    │   └── {model}-mlx/
-    │
-    └── subtitle/          # 🖥️ 浮動字幕視窗
-        ├── subtitle.py    # 字幕程式
-        └── README.md
+├── transcribe.py         # 翻譯成英文（HF 模型）
+├── transcribe_only.py    # 純轉錄（HF 模型）
+├── realtime.py           # 即時辨識（本地模型）
+├── convert/              # 模型轉換工具
+│   ├── convert.sh
+│   └── convert.py
+├── models/               # 轉換後的模型
+└── subtitle/             # 浮動字幕視窗
+    └── subtitle.py
 ```
 
 ---

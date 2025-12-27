@@ -5,12 +5,10 @@
 ## 快速開始
 
 ```bash
-cd /Users/winston/Projects/whisper-live-client/mlx/convert
-
 # 轉換臺灣客語模型
 ./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
 
-# 轉換其他模型
+# 轉換 OpenAI 模型
 ./convert.sh openai/whisper-large-v3
 ```
 
@@ -56,14 +54,13 @@ uv run python convert.py --help
 ## 輸出結構
 
 ```
-mlx/
-└── models/
-    ├── whisper-large-v2-taiwanese-hakka-v1-mlx/
-    │   ├── config.json
-    │   └── weights.npz
-    └── whisper-large-v3-mlx/
-        ├── config.json
-        └── weights.npz
+models/
+├── whisper-large-v2-taiwanese-hakka-v1-mlx/
+│   ├── config.json
+│   └── weights.npz
+└── whisper-large-v3-mlx/
+    ├── config.json
+    └── weights.npz
 ```
 
 ## 使用轉換後的模型
@@ -71,7 +68,7 @@ mlx/
 ### 即時語音辨識
 
 ```bash
-cd /Users/winston/Projects/whisper-live-client/mlx
+cd ..
 
 # 列出可用模型
 uv run python realtime.py --list
@@ -94,7 +91,7 @@ import mlx_whisper
 result = mlx_whisper.transcribe(
     "audio.wav",
     path_or_hf_repo="models/whisper-large-v2-taiwanese-hakka-v1-mlx",
-    language="zh",      # 可選，預設自動偵測
+    language="zh",      # 可選
     task="transcribe"   # 或 "translate"
 )
 
@@ -103,7 +100,7 @@ print(result["text"])
 
 ## 支援的模型
 
-理論上支援所有 HuggingFace 上的 Whisper 模型，包括：
+理論上支援所有 HuggingFace 上的 Whisper 模型：
 
 - OpenAI 官方模型：`openai/whisper-large-v3`
 - 社群微調模型：`formospeech/whisper-large-v2-taiwanese-hakka-v1`
@@ -112,31 +109,6 @@ print(result["text"])
 ## 注意事項
 
 - 首次轉換會從 HuggingFace 下載模型
-- large 模型約 3GB，需要足夠的記憶體
+- large 模型約 3GB，需要足夠的記憶體和磁碟空間
 - 轉換後使用 float16 格式以節省空間
 - 如果模型已轉換過，會自動跳過（使用 `--force` 強制重新轉換）
-
-## 疑難排解
-
-### 記憶體不足
-
-關閉其他應用程式，或使用 float32 格式：
-
-```bash
-./convert.sh <hf-repo> --float32
-```
-
-### 模型載入失敗
-
-確認輸出目錄中有完整的檔案：
-
-```bash
-ls -la ../models/<model-name>-mlx/
-# 應該看到:
-# config.json
-# weights.npz
-```
-
-### 網路問題
-
-如果下載失敗，可以手動下載模型後指定本地路徑。

@@ -22,9 +22,9 @@ build/
 *.swp
 
 # Output files
-output.srt
 *.wav
 *.mp3
+*.srt
 
 # uv lock (optional, can be committed)
 # uv.lock
@@ -33,7 +33,4 @@ output.srt
 .cache/
 
 # MLX model weights (too large for git)
-mlx/models/*/weights.npz
-
-# Debug files
-mlx/debug_weights.py
+models/*/weights.npz

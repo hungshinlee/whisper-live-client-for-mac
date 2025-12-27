@@ -9,13 +9,12 @@
 - ✅ 支援全螢幕模式（Google Slides、PowerPoint、Keynote）
 - ✅ 可拖動調整位置
 - ✅ 使用 Apple Silicon GPU 加速
-- ✅ 支援本地轉換的模型
 - ✅ 可自訂視窗大小、字體大小、顏色
 
 ## 設置
 
 ```bash
-cd /Users/winston/Projects/whisper-live-client/mlx/subtitle
+cd subtitle
 uv venv
 uv pip install mlx-whisper pyaudio numpy pyobjc-framework-Cocoa
 ```
@@ -32,27 +31,19 @@ uv run python subtitle.py
 uv run python subtitle.py --list
 ```
 
-### 指定模型
+### 指定選項
 
 ```bash
+# 指定模型
 uv run python subtitle.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
-```
 
-### 翻譯成英文
-
-```bash
+# 翻譯成英文
 uv run python subtitle.py --task translate
-```
 
-### 指定語言
-
-```bash
+# 指定語言
 uv run python subtitle.py --language zh
-```
 
-### 組合使用
-
-```bash
+# 組合使用
 uv run python subtitle.py -m whisper-large-v2-taiwanese-hakka-v1-mlx -l zh -t transcribe
 ```
 
@@ -61,7 +52,7 @@ uv run python subtitle.py -m whisper-large-v2-taiwanese-hakka-v1-mlx -l zh -t tr
 | 參數 | 簡寫 | 說明 | 預設值 |
 |------|------|------|--------|
 | `--model` | `-m` | 模型名稱或路徑 | 第一個可用模型 |
-| `--task` | `-t` | `transcribe`（轉錄）或 `translate`（翻譯成英文）| `transcribe` |
+| `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
 | `--list` | | 列出可用模型 | |
 
@@ -122,15 +113,14 @@ SILENCE_DURATION = 1.2        # 靜音多久後結束錄音（秒）
 
 ## 簡報流程建議
 
-1. 先轉換模型（如果還沒有的話）：
+1. 先轉換模型（如果需要的話）：
    ```bash
    cd ../convert
    ./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
    ```
 
-2. 啟動字幕程式，等待模型載入完成：
+2. 啟動字幕程式：
    ```bash
-   cd ../subtitle
    uv run python subtitle.py
    ```
 
@@ -152,19 +142,12 @@ cd ../convert
 
 ### 麥克風沒有反應
 
-確認終端機有麥克風權限：
 **系統設定** → **隱私與安全性** → **麥克風** → 勾選終端機
-
-### 辨識品質不佳
-
-- 說話清晰、語速適中
-- 減少背景噪音
-- 每句話之間稍微停頓
 
 ### 環境太吵
 
-提高 `SILENCE_THRESHOLD` 的值，例如改成 `800` 或 `1000`。
+提高 `SILENCE_THRESHOLD` 的值，例如 `800` 或 `1000`。
 
 ### 字幕更新太慢
 
-降低 `SILENCE_DURATION` 的值，例如改成 `0.8` 或 `1.0`。
+降低 `SILENCE_DURATION` 的值，例如 `0.8` 或 `1.0`。
