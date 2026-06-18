@@ -171,11 +171,36 @@ uv run python subtitle/subtitle.py --silence-duration 0.4
 
 **特色：**
 - 可拖動調整位置
-- 可自訂視窗大小、字體、顏色
 - 支援多行顯示，最新字幕在最下方
 - 支援多螢幕
 
-詳細說明請看 [subtitle/README.md](subtitle/README.md)
+### 自訂樣式
+
+編輯 `subtitle/subtitle.py` 開頭的設定區塊：
+
+```python
+# 視窗設定
+WINDOW_WIDTH_RATIO = 0.8      # 視窗寬度佔螢幕比例
+WINDOW_BOTTOM_MARGIN = 50     # 距離螢幕底部的距離（px）
+WINDOW_OPACITY = 0.85         # 透明度（0.0–1.0）
+
+# 文字設定
+FONT_SIZE = 36                # 字體大小
+FONT_NAME = None              # 字體名稱，None 為系統預設
+MAX_LINES = 3                 # 顯示行數
+LINE_HEIGHT = 1.3             # 行高倍率
+TEXT_COLOR = "white"          # 文字顏色：white / yellow / green / cyan
+```
+
+| 需求 | 設定 |
+|------|------|
+| 字更大 | `FONT_SIZE = 48` |
+| 字更小 | `FONT_SIZE = 28` |
+| 顯示更多行 | `MAX_LINES = 5` |
+| 只顯示一行 | `MAX_LINES = 1` |
+| 視窗更窄 | `WINDOW_WIDTH_RATIO = 0.6` |
+| 黃色字幕 | `TEXT_COLOR = "yellow"` |
+| 更透明 | `WINDOW_OPACITY = 0.7` |
 
 ---
 
