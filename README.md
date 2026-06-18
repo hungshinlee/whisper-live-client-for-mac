@@ -348,12 +348,10 @@ whisper-live-client-for-mac/
 ├── pyproject.toml        # 專案設定與依賴
 ├── uv.lock               # 鎖定版本
 ├── convert/              # 模型轉換工具
-│   ├── README.md
 │   ├── convert.sh
 │   └── convert.py
 ├── models/               # 轉換後的本地模型
 └── subtitle/             # 浮動字幕視窗
-    ├── README.md
     └── subtitle.py
 ```
 
@@ -362,11 +360,3 @@ whisper-live-client-for-mac/
 ## 授權
 
 [MIT License](LICENSE)
-
----
-
-## 作者
-
-**李鴻欣 (Hung-Shin Lee)**  
-聯和科創（United Link Co., Ltd.）  
-hungshin.lee@united-link.com.tw
