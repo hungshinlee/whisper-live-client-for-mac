@@ -158,6 +158,9 @@ uv run python subtitle/subtitle.py --task translate
 # 使用較小的模型
 uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
 
+# 顯示在延伸螢幕（HDMI 外接螢幕）
+uv run python subtitle/subtitle.py --screen 1
+
 # 調整 VAD 參數
 uv run python subtitle/subtitle.py --silence-duration 0.6
 ```
@@ -168,6 +171,7 @@ uv run python subtitle/subtitle.py --silence-duration 0.6
 - 可拖動調整位置
 - 可自訂視窗大小、字體、顏色
 - 支援多行顯示，最新字幕在最下方
+- 支援多螢幕，可指定顯示在哪個螢幕
 
 詳細說明請看 [subtitle/README.md](subtitle/README.md)
 
@@ -329,14 +333,18 @@ source ~/.zshrc
 ```
 whisper-live-client-for-mac/
 ├── README.md
+├── pyproject.toml        # 專案設定與依賴
+├── uv.lock               # 鎖定版本
 ├── realtime.py           # 即時語音辨識（主程式）
 ├── vad.py                # Silero VAD 模組
 ├── install_fonts.sh      # 安裝擴展漢字字體
 ├── convert/              # 模型轉換工具
+│   ├── README.md
 │   ├── convert.sh
 │   └── convert.py
-├── models/               # 轉換後的模型
+├── models/               # 轉換後的本地模型
 └── subtitle/             # 浮動字幕視窗
+    ├── README.md
     └── subtitle.py
 ```
 

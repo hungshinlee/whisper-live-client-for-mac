@@ -5,16 +5,19 @@
 使用方式（從專案根目錄執行）:
   # 使用預設模型
   uv run python subtitle/subtitle.py
-  
+
   # 指定模型
   uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
-  
+
   # 翻譯成英文
   uv run python subtitle/subtitle.py --task translate
-  
+
   # 指定語言
   uv run python subtitle/subtitle.py --language zh
-  
+
+  # 顯示在第二個螢幕（延伸螢幕）
+  uv run python subtitle/subtitle.py --screen 1
+
   # 列出可用模型
   uv run python subtitle/subtitle.py --list
 """
@@ -94,6 +97,7 @@ task = "transcribe"
 language = None
 vad_config = None
 convert_tw = False
+screen_index = 0
 
 
 def should_convert_to_tw(model_path: str) -> bool:
@@ -160,17 +164,22 @@ def get_text_color():
 
 class SubtitleWindow:
     def __init__(self):
-        screen = NSScreen.mainScreen()
+        screens = NSScreen.screens()
+        if screen_index < len(screens):
+            screen = screens[screen_index]
+        else:
+            print(f"警告：找不到螢幕 {screen_index}，使用主螢幕（共 {len(screens)} 個螢幕）")
+            screen = NSScreen.mainScreen()
         screen_frame = screen.frame()
         screen_width = screen_frame.size.width
-        
+
         window_width = screen_width * WINDOW_WIDTH_RATIO
         # 根據行數計算視窗高度
         line_pixel_height = FONT_SIZE * LINE_HEIGHT
         window_height = int(line_pixel_height * MAX_LINES + 30)  # 加上 padding
-        
-        x = (screen_width - window_width) / 2
-        y = WINDOW_BOTTOM_MARGIN
+
+        x = screen_frame.origin.x + (screen_width - window_width) / 2
+        y = screen_frame.origin.y + WINDOW_BOTTOM_MARGIN
         
         self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
             NSMakeRect(x, y, window_width, window_height),
@@ -355,12 +364,12 @@ def capture_thread(subtitle_window):
         while running:
             try:
                 data = stream.read(CHUNK, exception_on_overflow=False)
-            except:
+            except Exception:
                 break
-            
+
             if not running:
                 break
-            
+
             # 使用 VAD 處理
             audio_data = vad.process(data)
             
@@ -390,7 +399,7 @@ def signal_handler(signum, frame):
 
 
 def main():
-    global running, model, task, language, vad_config, convert_tw
+    global running, model, task, language, vad_config, convert_tw, screen_index
     
     parser = argparse.ArgumentParser(
         description="即時字幕浮動視窗（Apple Silicon GPU 加速）",
@@ -399,13 +408,16 @@ def main():
 範例:
   # 基本使用
   uv run python subtitle/subtitle.py
-  
+
   # 翻譯成英文
   uv run python subtitle/subtitle.py --task translate
-  
+
   # 使用較小的模型
   uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
-  
+
+  # 顯示在延伸螢幕（第二螢幕）
+  uv run python subtitle/subtitle.py --screen 1
+
   # 調整 VAD 參數
   uv run python subtitle/subtitle.py --silence-duration 0.6
 """
@@ -434,6 +446,12 @@ def main():
         action="store_true",
         help="列出可用的模型",
     )
+    parser.add_argument(
+        "--screen", "-s",
+        type=int,
+        default=0,
+        help="顯示字幕的螢幕編號（0=主螢幕，1=第二螢幕，依此類推），預設 0",
+    )
     # VAD 參數
     parser.add_argument(
         "--speech-threshold",
@@ -461,7 +479,7 @@ def main():
     )
     
     args = parser.parse_args()
-    
+
     # 列出模型
     if args.list:
         local_models = list_local_models()
@@ -472,20 +490,29 @@ def main():
         else:
             print("  （無）")
         print()
-        print("HuggingFace 模型:")
-        print("  • mlx-community/whisper-large-v3-mlx")
-        print("  • mlx-community/whisper-medium-mlx")
-        print("  • mlx-community/whisper-small-mlx")
+        print("HuggingFace 模型（會自動下載）:")
+        print("  • mlx-community/whisper-large-v3-mlx    翻譯✓")
+        print("  • mlx-community/whisper-large-v3-turbo  翻譯✗")
+        print("  • mlx-community/whisper-medium-mlx      翻譯✓")
+        print("  • mlx-community/whisper-small-mlx       翻譯✓")
+        print("  • mlx-community/whisper-base-mlx        翻譯✓")
+        print("  • mlx-community/whisper-tiny-mlx        翻譯✓")
         return
     
     # 解析模型
     model = resolve_model(args.model)
     task = args.task
     language = args.language
+    screen_index = args.screen
     
-    # 判斷是否需要轉換成臺灣繁體
-    convert_tw = should_convert_to_tw(model)
-    
+    # 判斷是否需要轉換成臺灣繁體（翻譯任務輸出英文，不需要轉換）
+    convert_tw = should_convert_to_tw(model) and task == "transcribe"
+
+    # translate 任務若未指定語言，自動補上 zh，否則短音訊語言偵測失敗會亂辨識
+    if task == "translate" and not language:
+        language = "zh"
+        print("ℹ️  translate 任務自動設定語言為 zh（可用 --language 覆蓋）")
+
     # 建立 VAD 設定
     vad_config = VADConfig(
         speech_threshold=args.speech_threshold,
@@ -501,14 +528,16 @@ def main():
     
     if "/" in model and not model.startswith("/"):
         model_display = model
+        model_source = "HuggingFace"
     else:
         model_display = Path(model).name
-    
+        model_source = "本地"
+
     print("=" * 50)
     print("即時字幕浮動視窗")
     print("使用 Apple Silicon GPU 加速")
     print("=" * 50)
-    print(f"模型: {model_display}")
+    print(f"模型: {model_display} ({model_source})")
     print(f"任務: {task_display}")
     print(f"語言: {lang_display}")
     if convert_tw:
@@ -521,6 +550,7 @@ def main():
     print(f"  前後緩衝: {args.speech_pad_duration} 秒")
     print("=" * 50)
     print(f"\n視窗設定：")
+    print(f"  螢幕：第 {screen_index} 個（0=主螢幕）")
     print(f"  寬度：螢幕的 {int(WINDOW_WIDTH_RATIO * 100)}%")
     print(f"  顯示行數：{MAX_LINES} 行")
     print(f"  字體：{FONT_SIZE} 像素")

@@ -226,20 +226,25 @@ def main():
             print("  （無）")
         print()
         print("HuggingFace 模型（會自動下載）:")
-        print("  • mlx-community/whisper-large-v3-mlx")
-        print("  • mlx-community/whisper-large-v3-turbo")
-        print("  • mlx-community/whisper-medium-mlx")
-        print("  • mlx-community/whisper-small-mlx")
-        print("  • mlx-community/whisper-base-mlx")
-        print("  • mlx-community/whisper-tiny-mlx")
+        print("  • mlx-community/whisper-large-v3-mlx    翻譯✓")
+        print("  • mlx-community/whisper-large-v3-turbo  翻譯✗")
+        print("  • mlx-community/whisper-medium-mlx      翻譯✓")
+        print("  • mlx-community/whisper-small-mlx       翻譯✓")
+        print("  • mlx-community/whisper-base-mlx        翻譯✓")
+        print("  • mlx-community/whisper-tiny-mlx        翻譯✓")
         return
     
     # 解析模型
     model = resolve_model(args.model)
     
-    # 判斷是否需要轉換成臺灣繁體
-    convert_tw = should_convert_to_tw(model)
-    
+    # 判斷是否需要轉換成臺灣繁體（翻譯任務輸出英文，不需要轉換）
+    convert_tw = should_convert_to_tw(model) and args.task == "transcribe"
+
+    # translate 任務若未指定語言，自動補上 zh，否則短音訊語言偵測失敗會亂辨識
+    if args.task == "translate" and not args.language:
+        args.language = "zh"
+        print("ℹ️  translate 任務自動設定語言為 zh（可用 --language 覆蓋）")
+
     # 顯示設定
     task_display = "轉錄" if args.task == "transcribe" else "翻譯成英文"
     lang_display = args.language if args.language else "自動偵測"
@@ -356,7 +361,7 @@ def main():
                 
                 try:
                     data = stream.read(CHUNK, exception_on_overflow=False)
-                except:
+                except Exception:
                     break
                 
                 audio_data = vad.process(data)

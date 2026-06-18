@@ -9,6 +9,7 @@
 - ✅ 支援全螢幕模式（Google Slides、PowerPoint、Keynote）
 - ✅ **多行顯示**，最新字幕在最下方（捲動效果）
 - ✅ 可拖動調整位置
+- ✅ **支援多螢幕**，可指定字幕顯示在哪個螢幕
 - ✅ 使用 Apple Silicon GPU 加速
 - ✅ 可自訂視窗大小、字體大小、顏色
 
@@ -29,6 +30,9 @@ uv run python subtitle/subtitle.py --model mlx-community/whisper-medium-mlx
 # 指定語言
 uv run python subtitle/subtitle.py --language zh
 
+# 顯示在延伸螢幕（HDMI 外接螢幕）
+uv run python subtitle/subtitle.py --screen 1
+
 # 列出可用模型
 uv run python subtitle/subtitle.py --list
 ```
@@ -42,6 +46,7 @@ uv run python subtitle/subtitle.py --list
 | `--model` | `-m` | 模型名稱（HF repo 或本地模型）| `whisper-large-v3-mlx` |
 | `--task` | `-t` | `transcribe` 或 `translate` | `transcribe` |
 | `--language` | `-l` | 語言代碼（zh, en, ja...）| 自動偵測 |
+| `--screen` | `-s` | 顯示字幕的螢幕編號（0=主螢幕，1=延伸螢幕）| `0` |
 | `--list` | | 列出可用模型 | |
 
 ### VAD 參數（語音偵測）
@@ -49,8 +54,8 @@ uv run python subtitle/subtitle.py --list
 | 參數 | 說明 | 預設值 |
 |------|------|--------|
 | `--speech-threshold` | 語音偵測門檻（0.0~1.0），越高越嚴格 | `0.5` |
-| `--silence-duration` | 語音結束後的靜音時長（秒） | `1.0` |
-| `--min-speech-duration` | 最短語音長度（秒），太短會被忽略 | `0.3` |
+| `--silence-duration` | 語音結束後的靜音時長（秒） | `0.6` |
+| `--min-speech-duration` | 最短語音長度（秒），太短會被忽略 | `0.2` |
 | `--speech-pad-duration` | 語音前後的緩衝（秒） | `0.1` |
 
 ### VAD 參數調整範例
