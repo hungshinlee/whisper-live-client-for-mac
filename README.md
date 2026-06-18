@@ -1,6 +1,6 @@
 # Whisper Live Client for Mac
 
-專為 Apple Silicon Mac 設計的即時語音轉文字工具，本地端執行、完全離線、GPU 加速，延遲極低。
+專為 Apple Silicon Mac 設計的即時語音轉文字工具。使用 MLX 框架讓 Whisper 模型在本地 GPU 上執行，搭配 Silero VAD 偵測語音段落，完全離線、延遲極低。支援轉錄與翻譯成英文，辨識結果自動轉換為臺灣繁體中文，並提供可浮在全螢幕上方的即時字幕視窗，適合簡報使用。
 
 ![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon-black?logo=apple&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
