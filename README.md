@@ -257,21 +257,42 @@ TEXT_COLOR = "white"          # 文字顏色：white / yellow / green / cyan
 
 ## 轉換自訂模型
 
-如需使用 HuggingFace 上的其他 Whisper 模型（如特定語言的微調模型），可以轉換為 MLX 格式：
+如需使用 HuggingFace 上的其他 Whisper 模型（如特定語言的微調模型），可以轉換為 MLX 格式。
 
 ```bash
 cd convert
+
+# 基本用法
 ./convert.sh <hf-repo>
 
-# 範例：臺灣客語模型
-./convert.sh formospeech/whisper-large-v2-taiwanese-hakka-v1
+# 強制重新轉換（模型已存在時）
+./convert.sh <hf-repo> --force
+
+# 使用 float32 精度（檔案較大但精度較高）
+./convert.sh <hf-repo> --float32
+```
+
+### 選項說明
+
+| 選項 | 說明 |
+|------|------|
+| `--output-dir` | 輸出目錄（預設：`../models`）|
+| `--dtype` | 數據類型：`float16`（預設）或 `float32` |
+| `--force` | 強制重新轉換，即使模型已存在 |
+
+### 使用轉換後的模型
+
+```bash
+cd ..
+
+# 列出可用模型（包含本地模型）
+uv run python realtime.py --list
 
 # 使用轉換後的模型
-cd ..
 uv run python realtime.py --model whisper-large-v2-taiwanese-hakka-v1-mlx
 ```
 
-詳細說明請看 [convert/README.md](convert/README.md)
+> 首次轉換會從 HuggingFace 下載原始模型，large 模型約 3 GB，請確認磁碟空間充足。若模型已轉換過，會自動跳過。
 
 ---
 
